@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+
 import '../models/quiz_question.dart';
 
 const sampleQuestions = [
@@ -13,9 +13,7 @@ const sampleQuestions = [
     correctIndex: 0,
     explanation:
         'Room code dipakai peserta untuk masuk ke sesi kuis yang dibuat host.',
-    category: 'EduQuiz',
-    points: 100,
-    color: Color(0xFF6366F1),
+    
   ),
 
   QuizQuestion(
@@ -29,9 +27,7 @@ const sampleQuestions = [
     correctIndex: 0,
     explanation:
         'Lobby room menampilkan peserta yang sudah bergabung dan menunggu host mulai.',
-    category: 'Room',
-    points: 100,
-    color: Color(0xFF8B5CF6),
+    
   ),
 
   QuizQuestion(
@@ -45,9 +41,7 @@ const sampleQuestions = [
     correctIndex: 0,
     explanation:
         'Leaderboard mengurutkan peserta berdasarkan skor tertinggi.',
-    category: 'Leaderboard',
-    points: 150,
-    color: Color(0xFF06B6D4),
+    
   ),
 
   QuizQuestion(
@@ -61,8 +55,6 @@ const sampleQuestions = [
     correctIndex: 0,
     explanation:
         'Review jawaban membantu proses belajar setelah kuis selesai.',
-    category: 'Review',
-    points: 150,
-    color: Color(0xFF10B981),
+    
   ),
 ];
