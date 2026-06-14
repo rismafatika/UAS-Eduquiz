@@ -1,5 +1,5 @@
 name: eduquiz
-description: A Flutter EduQuiz app with authentication, room codes, lobby, realtime quiz, leaderboard, review, and host dashboard.
+description: "A Flutter EduQuiz app with authentication, room codes, lobby, realtime quiz, leaderboard, review, and host dashboard."
 publish_to: "none"
 version: 1.0.0+1
 
@@ -9,6 +9,7 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  supabase_flutter: ^2.8.0
 
 dev_dependencies:
   flutter_test:
