@@ -4,7 +4,9 @@ import '../models/app_user.dart';
 import '../models/participant.dart';
 import '../models/quiz_question.dart';
 import '../models/quiz_room.dart';
+import '../widgets/app_background.dart';
 import '../widgets/app_panel.dart';
+import '../widgets/logout_action.dart';
 import '../widgets/room_header.dart';
 import '../widgets/section_title.dart';
 
@@ -14,7 +16,9 @@ class ReviewPage extends StatelessWidget {
   final AppUser user;
   final QuizRoom room;
 
-  Participant get _activeParticipant {
+  Participant? get _activeParticipant {
+    if (room.participants.isEmpty) return null;
+
     return room.participants.firstWhere(
       (participant) => participant.name == user.name,
       orElse: () => room.participants.first,
@@ -23,35 +27,48 @@ class ReviewPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final activeParticipant = _activeParticipant;
+
     return Scaffold(
-      appBar: AppBar(title: const Text('Review Jawaban')),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(20),
-          child: Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 900),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  RoomHeader(room: room),
-                  const SizedBox(height: 16),
-                  AppPanel(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const SectionTitle(icon: Icons.fact_check_outlined, title: 'Review Jawaban'),
-                        const SizedBox(height: 12),
-                        for (var i = 0; i < room.questions.length; i++)
-                          _ReviewCard(
-                            number: i + 1,
-                            question: room.questions[i],
-                            selectedIndex: _activeParticipant.answers[i],
-                          ),
-                      ],
+      appBar: AppBar(
+        title: const Text('Review Jawaban'),
+        actions: const [LogoutAction(), SizedBox(width: 8)],
+      ),
+      body: AppBackground(
+        child: SafeArea(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(20),
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 900),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    RoomHeader(room: room),
+                    const SizedBox(height: 16),
+                    AppPanel(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const SectionTitle(
+                              icon: Icons.fact_check_outlined,
+                              title: 'Review Jawaban'),
+                          const SizedBox(height: 12),
+                          if (activeParticipant == null)
+                            const Text(
+                                'Belum ada jawaban peserta untuk direview.')
+                          else
+                            for (var i = 0; i < room.questions.length; i++)
+                              _ReviewCard(
+                                number: i + 1,
+                                question: room.questions[i],
+                                selectedIndex: activeParticipant.answers[i],
+                              ),
+                        ],
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
@@ -75,6 +92,7 @@ class _ReviewCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isCorrect = selectedIndex == question.correctIndex;
+    final color = isCorrect ? const Color(0xFF16A34A) : const Color(0xFFDC2626);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -82,19 +100,35 @@ class _ReviewCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: isCorrect ? const Color(0xFFF0FDF4) : const Color(0xFFFEF2F2),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: isCorrect ? const Color(0xFF86EFAC) : const Color(0xFFFCA5A5)),
+        border: Border.all(
+            color:
+                isCorrect ? const Color(0xFF86EFAC) : const Color(0xFFFCA5A5)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Soal $number', style: const TextStyle(fontWeight: FontWeight.w900)),
-          const SizedBox(height: 6),
-          Text(question.question),
+          Row(
+            children: [
+              Icon(
+                  isCorrect
+                      ? Icons.check_circle_outline
+                      : Icons.cancel_outlined,
+                  color: color),
+              const SizedBox(width: 8),
+              Text('Soal $number',
+                  style: TextStyle(fontWeight: FontWeight.w900, color: color)),
+            ],
+          ),
           const SizedBox(height: 8),
-          Text('Jawaban kamu: ${selectedIndex == null ? '-' : question.options[selectedIndex!]}'),
+          Text(question.question,
+              style: const TextStyle(fontWeight: FontWeight.w800)),
+          const SizedBox(height: 8),
+          Text(
+              'Jawaban kamu: ${selectedIndex == null ? '-' : question.options[selectedIndex!]}'),
           Text('Jawaban benar: ${question.options[question.correctIndex]}'),
-          const SizedBox(height: 6),
-          Text(question.explanation),
+          const SizedBox(height: 8),
+          Text(question.explanation,
+              style: const TextStyle(color: Color(0xFF475569), height: 1.35)),
         ],
       ),
     );

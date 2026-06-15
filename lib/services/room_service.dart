@@ -90,18 +90,21 @@ class RoomService {
     String code;
 
     do {
-      code = List.generate(6, (_) => chars[random.nextInt(chars.length)]).join();
+      code =
+          List.generate(6, (_) => chars[random.nextInt(chars.length)]).join();
     } while (_rooms.containsKey(code));
 
     return code;
   }
 
-  void _simulateOtherParticipants(QuizRoom room, int questionIndex, String activeName) {
+  void _simulateOtherParticipants(
+      QuizRoom room, int questionIndex, String activeName) {
     final random = Random();
     final question = room.questions[questionIndex];
 
     for (final participant in room.participants) {
-      if (participant.name == activeName || participant.answers.containsKey(questionIndex)) {
+      if (participant.name == activeName ||
+          participant.answers.containsKey(questionIndex)) {
         continue;
       }
 

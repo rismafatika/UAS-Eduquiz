@@ -1,4 +1,3 @@
-
 import '../models/quiz_question.dart';
 
 const sampleQuestions = [
@@ -13,9 +12,7 @@ const sampleQuestions = [
     correctIndex: 0,
     explanation:
         'Room code dipakai peserta untuk masuk ke sesi kuis yang dibuat host.',
-    
   ),
-
   QuizQuestion(
     question: 'Halaman apa yang dipakai peserta sebelum kuis dimulai?',
     options: [
@@ -27,9 +24,7 @@ const sampleQuestions = [
     correctIndex: 0,
     explanation:
         'Lobby room menampilkan peserta yang sudah bergabung dan menunggu host mulai.',
-    
   ),
-
   QuizQuestion(
     question: 'Leaderboard otomatis menampilkan data apa?',
     options: [
@@ -39,11 +34,8 @@ const sampleQuestions = [
       'Tema pilihan peserta',
     ],
     correctIndex: 0,
-    explanation:
-        'Leaderboard mengurutkan peserta berdasarkan skor tertinggi.',
-    
+    explanation: 'Leaderboard mengurutkan peserta berdasarkan skor tertinggi.',
   ),
-
   QuizQuestion(
     question: 'Mengapa review jawaban dibutuhkan setelah kuis?',
     options: [
@@ -53,8 +45,6 @@ const sampleQuestions = [
       'Agar peserta login ulang',
     ],
     correctIndex: 0,
-    explanation:
-        'Review jawaban membantu proses belajar setelah kuis selesai.',
-    
+    explanation: 'Review jawaban membantu proses belajar setelah kuis selesai.',
   ),
 ];
