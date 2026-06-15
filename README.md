@@ -32,4 +32,25 @@ flutter pub get
 flutter run
 ```
 
-Versi ini memakai penyimpanan sementara di memori aplikasi agar semua fitur bisa dicoba tanpa backend.
+## Menghubungkan Supabase
+
+1. Buka Supabase, buat project baru.
+2. Buka menu SQL Editor.
+3. Jalankan isi file `SUPABASE_SCHEMA.sql`.
+4. Ambil Project URL dan anon public key dari Project Settings > API.
+5. Jalankan aplikasi dengan:
+
+```bash
+flutter run --dart-define=SUPABASE_URL=https://PROJECT_ID.supabase.co --dart-define=SUPABASE_ANON_KEY=ANON_KEY_KAMU
+```
+
+Jika URL dan anon key belum diisi, aplikasi tetap berjalan dalam mode lokal.
+
+## Catatan Backend
+
+Data yang dikirim ke Supabase:
+
+- `app_users`: data pengguna yang login.
+- `rooms`: room code, judul kuis, host, dan fase room.
+- `participants`: peserta dan skor.
+- `answers`: jawaban peserta per soal.

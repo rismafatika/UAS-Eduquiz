@@ -1,8 +1,10 @@
+import 'dart:async';
 import 'dart:math';
 
 import '../data/sample_questions.dart';
 import '../models/participant.dart';
 import '../models/quiz_room.dart';
+import 'supabase_service.dart';
 
 class RoomService {
   RoomService._();
@@ -30,11 +32,24 @@ class RoomService {
     ]);
 
     _rooms[code] = room;
+    unawaited(SupabaseService.instance.createRoom(room));
     return room;
   }
 
   QuizRoom? findRoom(String code) {
     return _rooms[code.trim().toUpperCase()];
+  }
+
+  Future<QuizRoom?> findRoomConnected(String code) async {
+    final normalizedCode = code.trim().toUpperCase();
+    final localRoom = _rooms[normalizedCode];
+    if (localRoom != null) return localRoom;
+
+    final remoteRoom = await SupabaseService.instance.findRoom(normalizedCode);
+    if (remoteRoom != null) {
+      _rooms[remoteRoom.code] = remoteRoom;
+    }
+    return remoteRoom;
   }
 
   Participant addParticipant({
@@ -46,6 +61,7 @@ class RoomService {
 
     final participant = Participant(name: name);
     room.participants.add(participant);
+    unawaited(SupabaseService.instance.addParticipant(room: room, participant: participant));
     return participant;
   }
 
@@ -56,6 +72,7 @@ class RoomService {
       participant.score = 0;
       participant.answers.clear();
     }
+    unawaited(SupabaseService.instance.updateRoom(room));
   }
 
   void answerQuestion({
@@ -70,6 +87,15 @@ class RoomService {
     if (answerIndex == question.correctIndex) {
       participant.score += 100;
     }
+    unawaited(
+      SupabaseService.instance.submitAnswer(
+        room: room,
+        participant: participant,
+        questionIndex: questionIndex,
+        answerIndex: answerIndex,
+        isCorrect: answerIndex == question.correctIndex,
+      ),
+    );
 
     _simulateOtherParticipants(room, questionIndex, participant.name);
 
@@ -78,10 +104,12 @@ class RoomService {
     } else {
       room.currentQuestionIndex++;
     }
+    unawaited(SupabaseService.instance.updateRoom(room));
   }
 
   void showLeaderboard(QuizRoom room) {
     room.phase = QuizPhase.leaderboard;
+    unawaited(SupabaseService.instance.updateRoom(room));
   }
 
   String _generateCode() {
@@ -110,6 +138,15 @@ class RoomService {
       if (answer == question.correctIndex) {
         participant.score += 100;
       }
+      unawaited(
+        SupabaseService.instance.submitAnswer(
+          room: room,
+          participant: participant,
+          questionIndex: questionIndex,
+          answerIndex: answer,
+          isCorrect: answer == question.correctIndex,
+        ),
+      );
     }
   }
 }

@@ -17,6 +17,7 @@ class JoinRoomPage extends StatefulWidget {
 
 class _JoinRoomPageState extends State<JoinRoomPage> {
   final _codeController = TextEditingController();
+  bool _isLoading = false;
 
   @override
   void dispose() {
@@ -24,8 +25,11 @@ class _JoinRoomPageState extends State<JoinRoomPage> {
     super.dispose();
   }
 
-  void _joinRoom() {
-    final room = RoomService.instance.findRoom(_codeController.text);
+  Future<void> _joinRoom() async {
+    setState(() => _isLoading = true);
+    final room = await RoomService.instance.findRoomConnected(_codeController.text);
+    if (!mounted) return;
+    setState(() => _isLoading = false);
 
     if (room == null) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Room code tidak ditemukan.')));
@@ -58,7 +62,11 @@ class _JoinRoomPageState extends State<JoinRoomPage> {
                       decoration: const InputDecoration(labelText: 'Room code', prefixIcon: Icon(Icons.pin_outlined), border: OutlineInputBorder()),
                     ),
                     const SizedBox(height: 16),
-                    FilledButton.icon(onPressed: _joinRoom, icon: const Icon(Icons.login), label: const Text('Gabung Lobby')),
+                    FilledButton.icon(
+                      onPressed: _isLoading ? null : _joinRoom,
+                      icon: Icon(_isLoading ? Icons.hourglass_top : Icons.login),
+                      label: Text(_isLoading ? 'Mencari room...' : 'Gabung Lobby'),
+                    ),
                   ],
                 ),
               ),
