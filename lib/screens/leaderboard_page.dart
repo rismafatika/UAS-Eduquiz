@@ -48,8 +48,15 @@ class LeaderboardPage extends StatelessWidget {
                               icon: Icons.leaderboard_outlined,
                               title: 'Leaderboard Otomatis'),
                           const SizedBox(height: 12),
-                          for (var i = 0; i < participants.length; i++)
-                            _RankRow(rank: i + 1, participant: participants[i]),
+                          if (participants.isEmpty)
+                            const _LeaderboardEmpty()
+                          else ...[
+                            _WinnerSpotlight(participant: participants.first),
+                            const SizedBox(height: 12),
+                            for (var i = 0; i < participants.length; i++)
+                              _RankRow(
+                                  rank: i + 1, participant: participants[i]),
+                          ],
                           const SizedBox(height: 16),
                           Wrap(
                             spacing: 10,
@@ -89,6 +96,85 @@ class LeaderboardPage extends StatelessWidget {
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _WinnerSpotlight extends StatelessWidget {
+  const _WinnerSpotlight({required this.participant});
+
+  final Participant participant;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFFFFFBEB), Color(0xFFEFF6FF)],
+        ),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: const Color(0xFFFDE68A)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 52,
+            height: 52,
+            decoration: BoxDecoration(
+              color: const Color(0xFFF59E0B),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: const Icon(Icons.emoji_events_outlined,
+                color: Colors.white, size: 30),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('Peringkat Teratas',
+                    style: TextStyle(
+                        color: Color(0xFF92400E), fontWeight: FontWeight.w900)),
+                const SizedBox(height: 4),
+                Text(participant.name,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                        fontSize: 22, fontWeight: FontWeight.w900)),
+              ],
+            ),
+          ),
+          Text('${participant.score}',
+              style:
+                  const TextStyle(fontSize: 28, fontWeight: FontWeight.w900)),
+        ],
+      ),
+    );
+  }
+}
+
+class _LeaderboardEmpty extends StatelessWidget {
+  const _LeaderboardEmpty();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+      ),
+      child: const Column(
+        children: [
+          Icon(Icons.leaderboard_outlined, color: Color(0xFF64748B), size: 34),
+          SizedBox(height: 8),
+          Text('Belum ada skor peserta',
+              style: TextStyle(fontWeight: FontWeight.w900)),
+        ],
       ),
     );
   }
