@@ -8,6 +8,7 @@ import '../widgets/section_title.dart';
 import '../widgets/status_badge.dart';
 import 'create_room_page.dart';
 import 'join_room_page.dart';
+import 'logout_page.dart';
 
 class HomePage extends StatelessWidget {
   const HomePage({super.key, required this.user});
@@ -20,14 +21,31 @@ class HomePage extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('EduQuiz'),
-        actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 16),
-            child: Center(child: Text(user.name, style: const TextStyle(fontWeight: FontWeight.w800))),
+  title: const Text('EduQuiz'),
+  actions: [
+    Padding(
+      padding: const EdgeInsets.only(right: 8),
+      child: Center(
+        child: Text(
+          user.name,
+          style: const TextStyle(
+            fontWeight: FontWeight.w800,
           ),
-        ],
+        ),
       ),
+    ),
+    IconButton(
+      tooltip: 'Logout',
+      icon: const Icon(Icons.logout),
+      onPressed: () {
+        showDialog(
+          context: context,
+          builder: (_) => const LogoutPage(),
+        );
+      },
+    ),
+  ],
+),
       body: ProPage(
         title: isHost ? 'Dashboard Awal Host' : 'Portal Peserta',
         subtitle: isHost
@@ -74,9 +92,9 @@ class HomePage extends StatelessWidget {
               builder: (context, constraints) {
                 final compact = constraints.maxWidth < 760;
                 final cards = [
-                  _FeatureCard(icon: Icons.verified_user_outlined, title: 'Auth', description: 'Login pengguna host dan peserta.'),
-                  _FeatureCard(icon: Icons.pin_outlined, title: 'Room Code', description: 'Kode unik untuk setiap sesi kuis.'),
-                  _FeatureCard(icon: Icons.leaderboard_outlined, title: 'Leaderboard', description: 'Skor peserta otomatis terurut.'),
+                  const _FeatureCard(icon: Icons.verified_user_outlined, title: 'Auth', description: 'Login pengguna host dan peserta.'),
+                  const _FeatureCard(icon: Icons.pin_outlined, title: 'Room Code', description: 'Kode unik untuk setiap sesi kuis.'),
+                  const _FeatureCard(icon: Icons.leaderboard_outlined, title: 'Leaderboard', description: 'Skor peserta otomatis terurut.'),
                 ];
 
                 if (compact) {

@@ -28,6 +28,7 @@ class _LobbyPageState extends State<LobbyPage> {
   }
 
   void _openDashboard() {
+    RoomService.instance.showDashboard(widget.room);
     Navigator.push(context, MaterialPageRoute(builder: (_) => HostDashboardPage(user: widget.user, room: widget.room)));
   }
 

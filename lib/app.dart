@@ -16,7 +16,6 @@ class EduQuizApp extends StatelessWidget {
           seedColor: const Color(0xFF1D4ED8),
           secondary: const Color(0xFF14B8A6),
           tertiary: const Color(0xFFF59E0B),
-          surface: Colors.white,
         ),
         scaffoldBackgroundColor: const Color(0xFFF7F9FC),
         appBarTheme: const AppBarTheme(

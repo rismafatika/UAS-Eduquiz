@@ -46,6 +46,28 @@ flutter run --dart-define=SUPABASE_URL=https://PROJECT_ID.supabase.co --dart-def
 
 Jika URL dan anon key belum diisi, aplikasi tetap berjalan dalam mode lokal.
 
+## Build untuk Google Play Testing
+
+Pastikan schema Supabase sudah dijalankan, lalu build AAB untuk internal testing:
+
+```bash
+flutter clean
+flutter pub get
+flutter build appbundle --release --dart-define=SUPABASE_URL=https://PROJECT_ID.supabase.co --dart-define=SUPABASE_ANON_KEY=ANON_KEY_KAMU
+```
+
+Output AAB berada di:
+
+```bash
+build/app/outputs/bundle/release/app-release.aab
+```
+
+Package Android sudah disiapkan sebagai:
+
+```bash
+com.uas.eduquiz
+```
+
 ## Catatan Backend
 
 Data yang dikirim ke Supabase:

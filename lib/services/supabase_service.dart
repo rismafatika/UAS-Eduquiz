@@ -34,78 +34,94 @@ class SupabaseService {
     }
   }
 
-  Future<void> createRoom(QuizRoom room) async {
-    final client = _client;
-    if (client == null) return;
-
-    await client.from('rooms').upsert({
-      'code': room.code,
-      'title': room.title,
-      'host_name': room.hostName,
-      'phase': room.phase.name,
-      'current_question_index': room.currentQuestionIndex,
-      'created_at': DateTime.now().toIso8601String(),
-    });
-
-    for (final participant in room.participants) {
-      await addParticipant(room: room, participant: participant);
-    }
-  }
-
   Future<void> saveUser(AppUser user) async {
     final client = _client;
     if (client == null) return;
 
-    await client.from('app_users').upsert({
-      'email': user.email,
-      'name': user.name,
-      'role': user.role.name,
-      'last_login_at': DateTime.now().toIso8601String(),
-    }, onConflict: 'email');
+    try {
+      await client.from('app_users').upsert({
+        'email': user.email,
+        'name': user.name,
+        'role': user.role.name,
+        'last_login_at': DateTime.now().toIso8601String(),
+      }, onConflict: 'email');
+    } catch (_) {
+      return;
+    }
+  }
+
+  Future<void> createRoom(QuizRoom room) async {
+    final client = _client;
+    if (client == null) return;
+
+    try {
+      await client.from('rooms').upsert({
+        'code': room.code,
+        'title': room.title,
+        'host_name': room.hostName,
+        'phase': room.phase.name,
+        'current_question_index': room.currentQuestionIndex,
+        'created_at': DateTime.now().toIso8601String(),
+      });
+
+      for (final participant in room.participants) {
+        await addParticipant(room: room, participant: participant);
+      }
+    } catch (_) {
+      return;
+    }
   }
 
   Future<void> updateRoom(QuizRoom room) async {
     final client = _client;
     if (client == null) return;
 
-    await client.from('rooms').update({
-      'phase': room.phase.name,
-      'current_question_index': room.currentQuestionIndex,
-    }).eq('code', room.code);
+    try {
+      await client.from('rooms').update({
+        'phase': room.phase.name,
+        'current_question_index': room.currentQuestionIndex,
+      }).eq('code', room.code);
+    } catch (_) {
+      return;
+    }
   }
 
   Future<QuizRoom?> findRoom(String code) async {
     final client = _client;
     if (client == null) return null;
 
-    final roomData = await client.from('rooms').select().eq('code', code).maybeSingle();
-    if (roomData == null) return null;
+    try {
+      final roomData = await client.from('rooms').select().eq('code', code).maybeSingle();
+      if (roomData == null) return null;
 
-    final room = QuizRoom(
-      code: roomData['code'] as String,
-      title: roomData['title'] as String,
-      hostName: roomData['host_name'] as String,
-      questions: sampleQuestions,
-    );
-
-    final phaseName = roomData['phase'] as String? ?? QuizPhase.lobby.name;
-    room.phase = QuizPhase.values.firstWhere(
-      (phase) => phase.name == phaseName,
-      orElse: () => QuizPhase.lobby,
-    );
-    room.currentQuestionIndex = roomData['current_question_index'] as int? ?? 0;
-
-    final participantRows = await client.from('participants').select().eq('room_code', room.code);
-    for (final row in participantRows) {
-      room.participants.add(
-        Participant(
-          name: row['name'] as String,
-          score: row['score'] as int? ?? 0,
-        ),
+      final room = QuizRoom(
+        code: roomData['code'] as String,
+        title: roomData['title'] as String,
+        hostName: roomData['host_name'] as String,
+        questions: sampleQuestions,
       );
-    }
 
-    return room;
+      final phaseName = roomData['phase'] as String? ?? QuizPhase.lobby.name;
+      room.phase = QuizPhase.values.firstWhere(
+        (phase) => phase.name == phaseName,
+        orElse: () => QuizPhase.lobby,
+      );
+      room.currentQuestionIndex = roomData['current_question_index'] as int? ?? 0;
+
+      final participantRows = await client.from('participants').select().eq('room_code', room.code);
+      for (final row in participantRows) {
+        room.participants.add(
+          Participant(
+            name: row['name'] as String,
+            score: row['score'] as int? ?? 0,
+          ),
+        );
+      }
+
+      return room;
+    } catch (_) {
+      return null;
+    }
   }
 
   Future<void> addParticipant({
@@ -115,12 +131,16 @@ class SupabaseService {
     final client = _client;
     if (client == null) return;
 
-    await client.from('participants').upsert({
-      'room_code': room.code,
-      'name': participant.name,
-      'score': participant.score,
-      'joined_at': DateTime.now().toIso8601String(),
-    }, onConflict: 'room_code,name');
+    try {
+      await client.from('participants').upsert({
+        'room_code': room.code,
+        'name': participant.name,
+        'score': participant.score,
+        'joined_at': DateTime.now().toIso8601String(),
+      }, onConflict: 'room_code,name');
+    } catch (_) {
+      return;
+    }
   }
 
   Future<void> submitAnswer({
@@ -133,17 +153,21 @@ class SupabaseService {
     final client = _client;
     if (client == null) return;
 
-    await client.from('answers').upsert({
-      'room_code': room.code,
-      'participant_name': participant.name,
-      'question_index': questionIndex,
-      'answer_index': answerIndex,
-      'is_correct': isCorrect,
-      'answered_at': DateTime.now().toIso8601String(),
-    }, onConflict: 'room_code,participant_name,question_index');
+    try {
+      await client.from('answers').upsert({
+        'room_code': room.code,
+        'participant_name': participant.name,
+        'question_index': questionIndex,
+        'answer_index': answerIndex,
+        'is_correct': isCorrect,
+        'answered_at': DateTime.now().toIso8601String(),
+      }, onConflict: 'room_code,participant_name,question_index');
 
-    await client.from('participants').update({
-      'score': participant.score,
-    }).eq('room_code', room.code).eq('name', participant.name);
+      await client.from('participants').update({
+        'score': participant.score,
+      }).eq('room_code', room.code).eq('name', participant.name);
+    } catch (_) {
+      return;
+    }
   }
 }

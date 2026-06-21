@@ -27,6 +27,7 @@ class _HostDashboardPageState extends State<HostDashboardPage> {
   }
 
   void _openReview() {
+    RoomService.instance.showReview(widget.room);
     Navigator.push(context, MaterialPageRoute(builder: (_) => ReviewPage(user: widget.user, room: widget.room)));
   }
 

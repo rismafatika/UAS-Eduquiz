@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../models/app_user.dart';
 import '../models/participant.dart';
 import '../models/quiz_room.dart';
+import '../services/room_service.dart';
 import '../widgets/app_panel.dart';
 import '../widgets/room_header.dart';
 import '../widgets/section_title.dart';
@@ -47,6 +48,7 @@ class LeaderboardPage extends StatelessWidget {
                           children: [
                             FilledButton.icon(
                               onPressed: () {
+                                RoomService.instance.showReview(room);
                                 Navigator.push(context, MaterialPageRoute(builder: (_) => ReviewPage(user: user, room: room)));
                               },
                               icon: const Icon(Icons.rate_review_outlined),
@@ -55,6 +57,7 @@ class LeaderboardPage extends StatelessWidget {
                             if (isHost)
                               OutlinedButton.icon(
                                 onPressed: () {
+                                  RoomService.instance.showDashboard(room);
                                   Navigator.push(context, MaterialPageRoute(builder: (_) => HostDashboardPage(user: user, room: room)));
                                 },
                                 icon: const Icon(Icons.dashboard_outlined),

@@ -15,21 +15,32 @@ class StatusBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+      padding: const EdgeInsets.symmetric(
+        horizontal: 10,
+        vertical: 7,
+      ),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(8),
         border: Border.all(
-  color: color.withValues(alpha: 0.35),
-),
+          color: color.withValues(alpha: 0.35),
+        ),
+      ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 16, color: color),
+          Icon(
+            icon,
+            size: 16,
+            color: color,
+          ),
           const SizedBox(width: 6),
           Text(
             label,
-            style: TextStyle(color: color, fontWeight: FontWeight.w900),
+            style: TextStyle(
+              color: color,
+              fontWeight: FontWeight.w900,
+            ),
           ),
         ],
       ),

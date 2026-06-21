@@ -36,10 +36,6 @@ class RoomService {
     return room;
   }
 
-  QuizRoom? findRoom(String code) {
-    return _rooms[code.trim().toUpperCase()];
-  }
-
   Future<QuizRoom?> findRoomConnected(String code) async {
     final normalizedCode = code.trim().toUpperCase();
     final localRoom = _rooms[normalizedCode];
@@ -82,18 +78,20 @@ class RoomService {
   }) {
     final questionIndex = room.currentQuestionIndex;
     final question = room.questions[questionIndex];
+    final isCorrect = answerIndex == question.correctIndex;
 
     participant.answers[questionIndex] = answerIndex;
-    if (answerIndex == question.correctIndex) {
+    if (isCorrect) {
       participant.score += 100;
     }
+
     unawaited(
       SupabaseService.instance.submitAnswer(
         room: room,
         participant: participant,
         questionIndex: questionIndex,
         answerIndex: answerIndex,
-        isCorrect: answerIndex == question.correctIndex,
+        isCorrect: isCorrect,
       ),
     );
 
@@ -109,6 +107,16 @@ class RoomService {
 
   void showLeaderboard(QuizRoom room) {
     room.phase = QuizPhase.leaderboard;
+    unawaited(SupabaseService.instance.updateRoom(room));
+  }
+
+  void showReview(QuizRoom room) {
+    room.phase = QuizPhase.review;
+    unawaited(SupabaseService.instance.updateRoom(room));
+  }
+
+  void showDashboard(QuizRoom room) {
+    room.phase = QuizPhase.dashboard;
     unawaited(SupabaseService.instance.updateRoom(room));
   }
 
@@ -134,17 +142,19 @@ class RoomService {
       }
 
       final answer = random.nextInt(question.options.length);
+      final isCorrect = answer == question.correctIndex;
       participant.answers[questionIndex] = answer;
-      if (answer == question.correctIndex) {
+      if (isCorrect) {
         participant.score += 100;
       }
+
       unawaited(
         SupabaseService.instance.submitAnswer(
           room: room,
           participant: participant,
           questionIndex: questionIndex,
           answerIndex: answer,
-          isCorrect: answer == question.correctIndex,
+          isCorrect: isCorrect,
         ),
       );
     }

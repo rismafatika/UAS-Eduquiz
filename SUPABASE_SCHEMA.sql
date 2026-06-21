@@ -39,18 +39,31 @@ alter table rooms enable row level security;
 alter table participants enable row level security;
 alter table answers enable row level security;
 
-create policy "allow anon read app_users" on app_users for select using (true);
-create policy "allow anon write app_users" on app_users for insert with check (true);
-create policy "allow anon update app_users" on app_users for update using (true);
+drop policy if exists "app_users_select" on app_users;
+drop policy if exists "app_users_insert" on app_users;
+drop policy if exists "app_users_update" on app_users;
+drop policy if exists "rooms_select" on rooms;
+drop policy if exists "rooms_insert" on rooms;
+drop policy if exists "rooms_update" on rooms;
+drop policy if exists "participants_select" on participants;
+drop policy if exists "participants_insert" on participants;
+drop policy if exists "participants_update" on participants;
+drop policy if exists "answers_select" on answers;
+drop policy if exists "answers_insert" on answers;
+drop policy if exists "answers_update" on answers;
 
-create policy "allow anon read rooms" on rooms for select using (true);
-create policy "allow anon write rooms" on rooms for insert with check (true);
-create policy "allow anon update rooms" on rooms for update using (true);
+create policy "app_users_select" on app_users for select using (true);
+create policy "app_users_insert" on app_users for insert with check (true);
+create policy "app_users_update" on app_users for update using (true);
 
-create policy "allow anon read participants" on participants for select using (true);
-create policy "allow anon write participants" on participants for insert with check (true);
-create policy "allow anon update participants" on participants for update using (true);
+create policy "rooms_select" on rooms for select using (true);
+create policy "rooms_insert" on rooms for insert with check (true);
+create policy "rooms_update" on rooms for update using (true);
 
-create policy "allow anon read answers" on answers for select using (true);
-create policy "allow anon write answers" on answers for insert with check (true);
-create policy "allow anon update answers" on answers for update using (true);
+create policy "participants_select" on participants for select using (true);
+create policy "participants_insert" on participants for insert with check (true);
+create policy "participants_update" on participants for update using (true);
+
+create policy "answers_select" on answers for select using (true);
+create policy "answers_insert" on answers for insert with check (true);
+create policy "answers_update" on answers for update using (true);
