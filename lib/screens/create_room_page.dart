@@ -27,6 +27,13 @@ class _CreateRoomPageState extends State<CreateRoomPage> {
   }
 
   void _createRoom() {
+    if (_titleController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Judul kuis tidak boleh kosong.')),
+      );
+      return;
+    }
+
     final room = RoomService.instance.createRoom(
       title: _titleController.text,
       hostName: widget.user.name,

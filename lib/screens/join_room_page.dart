@@ -1,13 +1,17 @@
 import 'package:flutter/material.dart';
 
 import '../models/app_user.dart';
+import '../models/quiz_room.dart';
 import '../services/room_service.dart';
 import '../services/supabase_service.dart';
 import '../widgets/app_panel.dart';
 import '../widgets/pro_page.dart';
 import '../widgets/section_title.dart';
 import '../widgets/status_badge.dart';
+import 'leaderboard_page.dart';
 import 'lobby_page.dart';
+import 'quiz_live_page.dart';
+import 'review_page.dart';
 
 class JoinRoomPage extends StatefulWidget {
   const JoinRoomPage({super.key, required this.user});
@@ -29,8 +33,16 @@ class _JoinRoomPageState extends State<JoinRoomPage> {
   }
 
   Future<void> _joinRoom() async {
+    final code = _codeController.text.trim();
+    if (code.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Masukkan room code terlebih dahulu.')),
+      );
+      return;
+    }
+
     setState(() => _isLoading = true);
-    final room = await RoomService.instance.findRoomConnected(_codeController.text);
+    final room = await RoomService.instance.findRoomConnected(code);
     if (!mounted) return;
     setState(() => _isLoading = false);
 
@@ -44,7 +56,14 @@ class _JoinRoomPageState extends State<JoinRoomPage> {
     RoomService.instance.addParticipant(room: room, name: widget.user.name);
     Navigator.pushReplacement(
       context,
-      MaterialPageRoute(builder: (_) => LobbyPage(user: widget.user, room: room)),
+      MaterialPageRoute(builder: (_) {
+        return switch (room.phase) {
+          QuizPhase.live => QuizLivePage(user: widget.user, room: room),
+          QuizPhase.leaderboard => LeaderboardPage(user: widget.user, room: room),
+          QuizPhase.review => ReviewPage(user: widget.user, room: room),
+          _ => LobbyPage(user: widget.user, room: room),
+        };
+      }),
     );
   }
 

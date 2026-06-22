@@ -18,7 +18,12 @@ class LeaderboardPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final participants = [...room.participants]..sort((a, b) => b.score.compareTo(a.score));
+    final participants = [...room.participants]
+      ..sort((a, b) {
+        final byScore = b.score.compareTo(a.score);
+        if (byScore != 0) return byScore;
+        return b.streak.compareTo(a.streak);
+      });
     final isHost = user.role == UserRole.host;
 
     return Scaffold(
@@ -96,9 +101,41 @@ class _RankRow extends StatelessWidget {
       ),
       child: Row(
         children: [
-          SizedBox(width: 44, child: Text('#$rank', style: const TextStyle(fontWeight: FontWeight.w900))),
-          Expanded(child: Text(participant.name, style: const TextStyle(fontWeight: FontWeight.w700))),
-          Text('${participant.score} poin'),
+          SizedBox(
+            width: 44,
+            child: Text(
+              '#$rank',
+              style: const TextStyle(fontWeight: FontWeight.w900),
+            ),
+          ),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  participant.name,
+                  style: const TextStyle(fontWeight: FontWeight.w700),
+                ),
+                Text(
+                  'Lv ${participant.level} - ${participant.rankTitle}',
+                  style: const TextStyle(color: Color(0xFF64748B), fontSize: 12),
+                ),
+              ],
+            ),
+          ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                '${participant.score} poin',
+                style: const TextStyle(fontWeight: FontWeight.w800),
+              ),
+              Text(
+                '${participant.streak} streak',
+                style: const TextStyle(color: Color(0xFF64748B), fontSize: 12),
+              ),
+            ],
+          ),
         ],
       ),
     );

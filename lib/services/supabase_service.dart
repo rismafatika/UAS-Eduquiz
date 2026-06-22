@@ -110,12 +110,28 @@ class SupabaseService {
 
       final participantRows = await client.from('participants').select().eq('room_code', room.code);
       for (final row in participantRows) {
-        room.participants.add(
-          Participant(
-            name: row['name'] as String,
-            score: row['score'] as int? ?? 0,
-          ),
+        final participant = Participant(
+          name: row['name'] as String,
+          score: row['score'] as int? ?? 0,
+          streak: row['streak'] as int? ?? 0,
+          xp: row['xp'] as int? ?? 0,
+          level: row['level'] as int? ?? 1,
         );
+
+        final answerRows = await client
+            .from('answers')
+            .select()
+            .eq('room_code', room.code)
+            .eq('participant_name', participant.name);
+        for (final answerRow in answerRows) {
+          final questionIndex = answerRow['question_index'] as int?;
+          final answerIndex = answerRow['answer_index'] as int?;
+          if (questionIndex != null && answerIndex != null) {
+            participant.answers[questionIndex] = answerIndex;
+          }
+        }
+
+        room.participants.add(participant);
       }
 
       return room;
@@ -136,6 +152,9 @@ class SupabaseService {
         'room_code': room.code,
         'name': participant.name,
         'score': participant.score,
+        'streak': participant.streak,
+        'xp': participant.xp,
+        'level': participant.level,
         'joined_at': DateTime.now().toIso8601String(),
       }, onConflict: 'room_code,name');
     } catch (_) {
@@ -165,6 +184,9 @@ class SupabaseService {
 
       await client.from('participants').update({
         'score': participant.score,
+        'streak': participant.streak,
+        'xp': participant.xp,
+        'level': participant.level,
       }).eq('room_code', room.code).eq('name', participant.name);
     } catch (_) {
       return;

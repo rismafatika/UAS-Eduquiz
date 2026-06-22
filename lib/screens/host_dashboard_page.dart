@@ -38,6 +38,9 @@ class _HostDashboardPageState extends State<HostDashboardPage> {
     final averageScore = widget.room.participants.isEmpty
         ? 0
         : widget.room.participants.map((participant) => participant.score).reduce((a, b) => a + b) / widget.room.participants.length;
+    final topStreak = widget.room.participants.isEmpty
+        ? 0
+        : widget.room.participants.map((participant) => participant.streak).reduce((a, b) => a > b ? a : b);
 
     return Scaffold(
       appBar: AppBar(title: const Text('Dashboard Host')),
@@ -59,6 +62,7 @@ class _HostDashboardPageState extends State<HostDashboardPage> {
                         _MetricCard(label: 'Peserta', value: '${widget.room.participants.length}', icon: Icons.groups_2_outlined),
                         _MetricCard(label: 'Jawaban', value: '$totalAnswers/$maxAnswers', icon: Icons.checklist_rtl),
                         _MetricCard(label: 'Rata-rata', value: averageScore.toStringAsFixed(0), icon: Icons.bar_chart),
+                        _MetricCard(label: 'Top streak', value: '$topStreak', icon: Icons.local_fire_department_outlined),
                       ];
 
                       if (compact) {
@@ -146,11 +150,16 @@ class _ParticipantProgress extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(participant.name, style: const TextStyle(fontWeight: FontWeight.w800)),
-              Text('${participant.score} poin'),
+              Text('${participant.score} poin | Lv ${participant.level}'),
             ],
           ),
           const SizedBox(height: 6),
           LinearProgressIndicator(value: participant.answers.length / room.questions.length),
+          const SizedBox(height: 4),
+          Text(
+            '${participant.answers.length}/${room.questions.length} jawaban - ${participant.streak} streak - ${participant.rankTitle}',
+            style: const TextStyle(color: Color(0xFF64748B), fontSize: 12),
+          ),
         ],
       ),
     );
