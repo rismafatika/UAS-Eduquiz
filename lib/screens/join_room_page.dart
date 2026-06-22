@@ -59,7 +59,8 @@ class _JoinRoomPageState extends State<JoinRoomPage> {
       MaterialPageRoute(builder: (_) {
         return switch (room.phase) {
           QuizPhase.live => QuizLivePage(user: widget.user, room: room),
-          QuizPhase.leaderboard => LeaderboardPage(user: widget.user, room: room),
+          QuizPhase.leaderboard =>
+            LeaderboardPage(user: widget.user, room: room),
           QuizPhase.review => ReviewPage(user: widget.user, room: room),
           _ => LobbyPage(user: widget.user, room: room),
         };
@@ -73,7 +74,8 @@ class _JoinRoomPageState extends State<JoinRoomPage> {
       appBar: AppBar(title: const Text('Gabung Room')),
       body: ProPage(
         title: 'Gabung Sesi Kuis',
-        subtitle: 'Masukkan room code dari host. Jika Supabase aktif, aplikasi juga mencari room dari database online.',
+        subtitle:
+            'Masukkan room code dari host. Jika Supabase aktif, aplikasi juga mencari room dari database online.',
         maxWidth: 760,
         child: AppPanel(
           child: Column(
@@ -85,11 +87,20 @@ class _JoinRoomPageState extends State<JoinRoomPage> {
                 spacing: 8,
                 runSpacing: 8,
                 children: [
-                  const StatusBadge(label: 'Lobby peserta', icon: Icons.groups_2_outlined, color: Color(0xFF1D4ED8)),
+                  const StatusBadge(
+                      label: 'Lobby peserta',
+                      icon: Icons.groups_2_outlined,
+                      color: Color(0xFF1D4ED8)),
                   StatusBadge(
-                    label: SupabaseService.instance.isReady ? 'Online sync' : 'Local only',
-                    icon: SupabaseService.instance.isReady ? Icons.cloud_done_outlined : Icons.storage_outlined,
-                    color: SupabaseService.instance.isReady ? const Color(0xFF16A34A) : const Color(0xFFF59E0B),
+                    label: SupabaseService.instance.isReady
+                        ? 'Online sync'
+                        : 'Local only',
+                    icon: SupabaseService.instance.isReady
+                        ? Icons.cloud_done_outlined
+                        : Icons.storage_outlined,
+                    color: SupabaseService.instance.isReady
+                        ? const Color(0xFF16A34A)
+                        : const Color(0xFFF59E0B),
                   ),
                 ],
               ),

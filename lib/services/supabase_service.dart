@@ -26,7 +26,7 @@ class SupabaseService {
     try {
       await Supabase.initialize(
         url: SupabaseConfig.url,
-        anonKey: SupabaseConfig.anonKey,
+        publishableKey: SupabaseConfig.anonKey,
       );
       _ready = true;
     } catch (_) {
@@ -91,7 +91,8 @@ class SupabaseService {
     if (client == null) return null;
 
     try {
-      final roomData = await client.from('rooms').select().eq('code', code).maybeSingle();
+      final roomData =
+          await client.from('rooms').select().eq('code', code).maybeSingle();
       if (roomData == null) return null;
 
       final room = QuizRoom(
@@ -106,9 +107,11 @@ class SupabaseService {
         (phase) => phase.name == phaseName,
         orElse: () => QuizPhase.lobby,
       );
-      room.currentQuestionIndex = roomData['current_question_index'] as int? ?? 0;
+      room.currentQuestionIndex =
+          roomData['current_question_index'] as int? ?? 0;
 
-      final participantRows = await client.from('participants').select().eq('room_code', room.code);
+      final participantRows =
+          await client.from('participants').select().eq('room_code', room.code);
       for (final row in participantRows) {
         final participant = Participant(
           name: row['name'] as String,
@@ -182,12 +185,16 @@ class SupabaseService {
         'answered_at': DateTime.now().toIso8601String(),
       }, onConflict: 'room_code,participant_name,question_index');
 
-      await client.from('participants').update({
-        'score': participant.score,
-        'streak': participant.streak,
-        'xp': participant.xp,
-        'level': participant.level,
-      }).eq('room_code', room.code).eq('name', participant.name);
+      await client
+          .from('participants')
+          .update({
+            'score': participant.score,
+            'streak': participant.streak,
+            'xp': participant.xp,
+            'level': participant.level,
+          })
+          .eq('room_code', room.code)
+          .eq('name', participant.name);
     } catch (_) {
       return;
     }

@@ -24,11 +24,20 @@ class RoomHeader extends StatelessWidget {
                 width: 48,
                 height: 48,
                 decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                  color: Theme.of(context)
+                      .colorScheme
+                      .primary
+                      .withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Theme.of(context).colorScheme.primary.withOpacity(0.2)),
+                  border: Border.all(
+                    color: Theme.of(context)
+                        .colorScheme
+                        .primary
+                        .withValues(alpha: 0.2),
+                  ),
                 ),
-                child: Icon(Icons.auto_stories_outlined, color: Theme.of(context).colorScheme.primary),
+                child: Icon(Icons.auto_stories_outlined,
+                    color: Theme.of(context).colorScheme.primary),
               ),
               const SizedBox(width: 12),
               Column(
@@ -36,10 +45,14 @@ class RoomHeader extends StatelessWidget {
                 children: [
                   Text(
                     room.title,
-                    style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: Color(0xFF0F172A)),
+                    style: const TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.w900,
+                        color: Color(0xFF0F172A)),
                   ),
                   const SizedBox(height: 4),
-                  Text('Host: ${room.hostName}', style: const TextStyle(color: Color(0xFF64748B))),
+                  Text('Host: ${room.hostName}',
+                      style: const TextStyle(color: Color(0xFF64748B))),
                 ],
               ),
             ],
@@ -49,9 +62,13 @@ class RoomHeader extends StatelessWidget {
             runSpacing: 8,
             crossAxisAlignment: WrapCrossAlignment.center,
             children: [
-              StatusBadge(label: _phaseLabel(room.phase), icon: _phaseIcon(room.phase), color: _phaseColor(room.phase)),
+              StatusBadge(
+                  label: _phaseLabel(room.phase),
+                  icon: _phaseIcon(room.phase),
+                  color: _phaseColor(room.phase)),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                 decoration: BoxDecoration(
                   color: const Color(0xFFEFF6FF),
                   borderRadius: BorderRadius.circular(8),

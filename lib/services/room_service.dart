@@ -60,7 +60,8 @@ class RoomService {
 
     final participant = Participant(name: normalizedName);
     room.participants.add(participant);
-    unawaited(SupabaseService.instance.addParticipant(room: room, participant: participant));
+    unawaited(SupabaseService.instance
+        .addParticipant(room: room, participant: participant));
     return participant;
   }
 
@@ -144,7 +145,8 @@ class RoomService {
     String code;
 
     do {
-      code = List.generate(6, (_) => chars[random.nextInt(chars.length)]).join();
+      code =
+          List.generate(6, (_) => chars[random.nextInt(chars.length)]).join();
     } while (_rooms.containsKey(code));
 
     return code;
@@ -156,16 +158,22 @@ class RoomService {
   }
 
   int _pointsFor(int basePoints, int currentStreak) {
-    final streakBonus = currentStreak >= 2 ? 50 : currentStreak == 1 ? 25 : 0;
+    final streakBonus = currentStreak >= 2
+        ? 50
+        : currentStreak == 1
+            ? 25
+            : 0;
     return basePoints + streakBonus;
   }
 
-  void _simulateOtherParticipants(QuizRoom room, int questionIndex, String activeName) {
+  void _simulateOtherParticipants(
+      QuizRoom room, int questionIndex, String activeName) {
     final random = Random();
     final question = room.questions[questionIndex];
 
     for (final participant in room.participants) {
-      if (participant.name == activeName || participant.answers.containsKey(questionIndex)) {
+      if (participant.name == activeName ||
+          participant.answers.containsKey(questionIndex)) {
         continue;
       }
 
