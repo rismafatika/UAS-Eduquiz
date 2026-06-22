@@ -7,6 +7,7 @@ import '../services/room_service.dart';
 import '../widgets/app_panel.dart';
 import '../widgets/room_header.dart';
 import '../widgets/section_title.dart';
+import 'leaderboard_page.dart';
 import 'quiz_live_page.dart';
 import 'review_page.dart';
 
@@ -21,23 +22,61 @@ class HostDashboardPage extends StatefulWidget {
 }
 
 class _HostDashboardPageState extends State<HostDashboardPage> {
+  int _demoParticipantCounter = 1;
+
   void _restartQuiz() {
     setState(() => RoomService.instance.startQuiz(widget.room));
-    Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => QuizLivePage(user: widget.user, room: widget.room)));
+    Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+            builder: (_) =>
+                QuizLivePage(user: widget.user, room: widget.room)));
   }
 
   void _openReview() {
     RoomService.instance.showReview(widget.room);
-    Navigator.push(context, MaterialPageRoute(builder: (_) => ReviewPage(user: widget.user, room: widget.room)));
+    Navigator.push(
+        context,
+        MaterialPageRoute(
+            builder: (_) => ReviewPage(user: widget.user, room: widget.room)));
+  }
+
+  void _openLeaderboard() {
+    RoomService.instance.showLeaderboard(widget.room);
+    Navigator.push(
+        context,
+        MaterialPageRoute(
+            builder: (_) =>
+                LeaderboardPage(user: widget.user, room: widget.room)));
+  }
+
+  void _addDemoParticipant() {
+    setState(() {
+      RoomService.instance.addParticipant(
+        room: widget.room,
+        name: 'Peserta Demo $_demoParticipantCounter',
+      );
+      _demoParticipantCounter++;
+    });
   }
 
   @override
   Widget build(BuildContext context) {
-    final totalAnswers = widget.room.participants.fold<int>(0, (sum, participant) => sum + participant.answers.length);
-    final maxAnswers = widget.room.participants.length * widget.room.questions.length;
+    final totalAnswers = widget.room.participants
+        .fold<int>(0, (sum, participant) => sum + participant.answers.length);
+    final maxAnswers =
+        widget.room.participants.length * widget.room.questions.length;
     final averageScore = widget.room.participants.isEmpty
         ? 0
-        : widget.room.participants.map((participant) => participant.score).reduce((a, b) => a + b) / widget.room.participants.length;
+        : widget.room.participants
+                .map((participant) => participant.score)
+                .reduce((a, b) => a + b) /
+            widget.room.participants.length;
+    final topStreak = widget.room.participants.isEmpty
+        ? 0
+        : widget.room.participants
+            .map((participant) => participant.streak)
+            .reduce((a, b) => a > b ? a : b);
 
     return Scaffold(
       appBar: AppBar(title: const Text('Dashboard Host')),
@@ -56,19 +95,41 @@ class _HostDashboardPageState extends State<HostDashboardPage> {
                     builder: (context, constraints) {
                       final compact = constraints.maxWidth < 720;
                       final cards = [
-                        _MetricCard(label: 'Peserta', value: '${widget.room.participants.length}', icon: Icons.groups_2_outlined),
-                        _MetricCard(label: 'Jawaban', value: '$totalAnswers/$maxAnswers', icon: Icons.checklist_rtl),
-                        _MetricCard(label: 'Rata-rata', value: averageScore.toStringAsFixed(0), icon: Icons.bar_chart),
+                        _MetricCard(
+                            label: 'Peserta',
+                            value: '${widget.room.participants.length}',
+                            icon: Icons.groups_2_outlined),
+                        _MetricCard(
+                            label: 'Jawaban',
+                            value: '$totalAnswers/$maxAnswers',
+                            icon: Icons.checklist_rtl),
+                        _MetricCard(
+                            label: 'Rata-rata',
+                            value: averageScore.toStringAsFixed(0),
+                            icon: Icons.bar_chart),
+                        _MetricCard(
+                            label: 'Top streak',
+                            value: '$topStreak',
+                            icon: Icons.local_fire_department_outlined),
                       ];
 
                       if (compact) {
                         return Column(
-                          children: cards.map((card) => Padding(padding: const EdgeInsets.only(bottom: 10), child: card)).toList(),
+                          children: cards
+                              .map((card) => Padding(
+                                  padding: const EdgeInsets.only(bottom: 10),
+                                  child: card))
+                              .toList(),
                         );
                       }
 
                       return Row(
-                        children: cards.map((card) => Expanded(child: Padding(padding: const EdgeInsets.only(right: 10), child: card))).toList(),
+                        children: cards
+                            .map((card) => Expanded(
+                                child: Padding(
+                                    padding: const EdgeInsets.only(right: 10),
+                                    child: card)))
+                            .toList(),
                       );
                     },
                   ),
@@ -77,18 +138,37 @@ class _HostDashboardPageState extends State<HostDashboardPage> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const SectionTitle(icon: Icons.dashboard_outlined, title: 'Kontrol dan Progres'),
+                        const SectionTitle(
+                            icon: Icons.dashboard_outlined,
+                            title: 'Kontrol dan Progres'),
                         const SizedBox(height: 14),
                         Wrap(
                           spacing: 10,
                           runSpacing: 10,
                           children: [
-                            FilledButton.icon(onPressed: _restartQuiz, icon: const Icon(Icons.refresh), label: const Text('Mulai Ulang Quiz')),
-                            OutlinedButton.icon(onPressed: _openReview, icon: const Icon(Icons.rate_review_outlined), label: const Text('Review Jawaban')),
+                            FilledButton.icon(
+                                onPressed: _restartQuiz,
+                                icon: const Icon(Icons.refresh),
+                                label: const Text('Mulai Ulang Quiz')),
+                            OutlinedButton.icon(
+                                onPressed: _openLeaderboard,
+                                icon: const Icon(Icons.leaderboard_outlined),
+                                label: const Text('Leaderboard')),
+                            OutlinedButton.icon(
+                                onPressed: _openReview,
+                                icon: const Icon(Icons.rate_review_outlined),
+                                label: const Text('Review Jawaban')),
+                            OutlinedButton.icon(
+                                onPressed: _addDemoParticipant,
+                                icon:
+                                    const Icon(Icons.person_add_alt_1_outlined),
+                                label: const Text('Tambah Peserta Demo')),
                           ],
                         ),
                         const SizedBox(height: 18),
-                        for (final participant in widget.room.participants) _ParticipantProgress(room: widget.room, participant: participant),
+                        for (final participant in widget.room.participants)
+                          _ParticipantProgress(
+                              room: widget.room, participant: participant),
                       ],
                     ),
                   ),
@@ -103,7 +183,8 @@ class _HostDashboardPageState extends State<HostDashboardPage> {
 }
 
 class _MetricCard extends StatelessWidget {
-  const _MetricCard({required this.label, required this.value, required this.icon});
+  const _MetricCard(
+      {required this.label, required this.value, required this.icon});
 
   final String label;
   final String value;
@@ -119,7 +200,9 @@ class _MetricCard extends StatelessWidget {
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(value, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900)),
+              Text(value,
+                  style: const TextStyle(
+                      fontSize: 22, fontWeight: FontWeight.w900)),
               Text(label),
             ],
           ),
@@ -145,12 +228,19 @@ class _ParticipantProgress extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(participant.name, style: const TextStyle(fontWeight: FontWeight.w800)),
-              Text('${participant.score} poin'),
+              Text(participant.name,
+                  style: const TextStyle(fontWeight: FontWeight.w800)),
+              Text('${participant.score} poin | Lv ${participant.level}'),
             ],
           ),
           const SizedBox(height: 6),
-          LinearProgressIndicator(value: participant.answers.length / room.questions.length),
+          LinearProgressIndicator(
+              value: participant.answers.length / room.questions.length),
+          const SizedBox(height: 4),
+          Text(
+            '${participant.answers.length}/${room.questions.length} jawaban - ${participant.streak} streak - ${participant.rankTitle}',
+            style: const TextStyle(color: Color(0xFF64748B), fontSize: 12),
+          ),
         ],
       ),
     );
