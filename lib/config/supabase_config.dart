@@ -1,17 +1,11 @@
 class SupabaseConfig {
   const SupabaseConfig._();
 
-  static const url = String.fromEnvironment(
-    'SUPABASE_URL',
-    defaultValue: '',
-  );
+  static const url = 'https://kuubwgcedzhetxowbpmu.supabase.co';
 
-  static const anonKey = String.fromEnvironment(
-    'SUPABASE_ANON_KEY',
-    defaultValue: '',
-  );
+  static const anonKey = 'sb_publishable_QohMi69PpUtiLgNJakAE-g_wLrVzc2B';
 
   static bool get isConfigured {
-    return url.startsWith('https://') && anonKey.isNotEmpty;
+    return url.isNotEmpty && anonKey.isNotEmpty;
   }
 }
