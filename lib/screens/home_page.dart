@@ -15,6 +15,23 @@ class HomePage extends StatelessWidget {
 
   final AppUser user;
 
+  Future<void> _logout(BuildContext context) async {
+    await SupabaseService.instance.signOut();
+    if (!context.mounted) return;
+    Navigator.of(context).pushNamedAndRemoveUntil('/', (route) => false);
+  }
+
+  Future<void> _confirmLogout(BuildContext context) async {
+    final logout = await showDialog<bool>(
+      context: context,
+      builder: (_) => const LogoutPage(),
+    );
+
+    if (logout == true && context.mounted) {
+      await _logout(context);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final isHost = user.role == UserRole.host;
@@ -23,34 +40,21 @@ class HomePage extends StatelessWidget {
       appBar: AppBar(
         title: const Text('EduQuiz'),
         actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 8),
-            child: Center(
-              child: Text(
-                user.name,
-                style: const TextStyle(
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-            ),
+          IconButton(
+            tooltip: 'Daftar Akun',
+            icon: const Icon(Icons.person_outline),
+            onPressed: () {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Menu Daftar Akun ditekan.')),
+              );
+            },
           ),
           IconButton(
             tooltip: 'Logout',
             icon: const Icon(Icons.logout),
-            onPressed: () async {
-              final logout = await showDialog<bool>(
-                context: context,
-                builder: (_) => const LogoutPage(),
-              );
-
-              if (logout == true && context.mounted) {
-                Navigator.of(context).pushNamedAndRemoveUntil(
-                  '/',
-                  (route) => false,
-                );
-              }
-            },
+            onPressed: () => _confirmLogout(context),
           ),
+          const SizedBox(width: 8),
         ],
       ),
       body: ProPage(
@@ -61,6 +65,81 @@ class HomePage extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            AppPanel(
+              child: Row(
+                children: [
+                  CircleAvatar(
+                    radius: 24,
+                    backgroundColor: Theme.of(context).colorScheme.primary,
+                    child: Text(
+                      user.name.isNotEmpty ? user.name[0].toUpperCase() : '?',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          user.name,
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          user.email,
+                          style: const TextStyle(color: Color(0xFF64748B)),
+                        ),
+                        const SizedBox(height: 6),
+                        Chip(
+                          label: Text(isHost ? 'Host / Guru' : 'Peserta'),
+                          backgroundColor: isHost
+                              ? const Color(0xFFEDE9FE)
+                              : const Color(0xFFE0F2FE),
+                          labelStyle: TextStyle(
+                            color: isHost
+                                ? const Color(0xFF6D28D9)
+                                : const Color(0xFF0369A1),
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            AppPanel(
+              child: Wrap(
+                spacing: 10,
+                runSpacing: 10,
+                children: [
+                  FilledButton.icon(
+                    onPressed: () {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                            content: Text('Menu Daftar Akun belum dibuat.')),
+                      );
+                    },
+                    icon: const Icon(Icons.person_outline),
+                    label: const Text('Daftar Akun'),
+                  ),
+                  OutlinedButton.icon(
+                    onPressed: () => _confirmLogout(context),
+                    icon: const Icon(Icons.logout),
+                    label: const Text('Logout'),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
             AppPanel(
               child: Wrap(
                 alignment: WrapAlignment.spaceBetween,
@@ -88,9 +167,10 @@ class HomePage extends StatelessWidget {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                            builder: (_) => isHost
-                                ? CreateRoomPage(user: user)
-                                : JoinRoomPage(user: user)),
+                          builder: (_) => isHost
+                              ? CreateRoomPage(user: user)
+                              : JoinRoomPage(user: user),
+                        ),
                       );
                     },
                     icon: Icon(
@@ -106,35 +186,45 @@ class HomePage extends StatelessWidget {
                 final compact = constraints.maxWidth < 760;
                 final cards = [
                   const _FeatureCard(
-                      icon: Icons.verified_user_outlined,
-                      title: 'Auth',
-                      description: 'Login pengguna host dan peserta.'),
+                    icon: Icons.verified_user_outlined,
+                    title: 'Auth',
+                    description: 'Login pengguna host dan peserta.',
+                  ),
                   const _FeatureCard(
-                      icon: Icons.pin_outlined,
-                      title: 'Room Code',
-                      description: 'Kode unik untuk setiap sesi kuis.'),
+                    icon: Icons.pin_outlined,
+                    title: 'Room Code',
+                    description: 'Kode unik untuk setiap sesi kuis.',
+                  ),
                   const _FeatureCard(
-                      icon: Icons.leaderboard_outlined,
-                      title: 'Leaderboard',
-                      description: 'Skor peserta otomatis terurut.'),
+                    icon: Icons.leaderboard_outlined,
+                    title: 'Leaderboard',
+                    description: 'Skor peserta otomatis terurut.',
+                  ),
                 ];
 
                 if (compact) {
                   return Column(
                     children: cards
-                        .map((card) => Padding(
+                        .map(
+                          (card) => Padding(
                             padding: const EdgeInsets.only(bottom: 10),
-                            child: card))
+                            child: card,
+                          ),
+                        )
                         .toList(),
                   );
                 }
 
                 return Row(
                   children: cards
-                      .map((card) => Expanded(
+                      .map(
+                        (card) => Expanded(
                           child: Padding(
-                              padding: const EdgeInsets.only(right: 10),
-                              child: card)))
+                            padding: const EdgeInsets.only(right: 10),
+                            child: card,
+                          ),
+                        ),
+                      )
                       .toList(),
                 );
               },
@@ -146,13 +236,15 @@ class HomePage extends StatelessWidget {
                 runSpacing: 8,
                 children: [
                   const StatusBadge(
-                      label: 'Quiz real-time',
-                      icon: Icons.bolt,
-                      color: Color(0xFF14B8A6)),
+                    label: 'Quiz real-time',
+                    icon: Icons.bolt,
+                    color: Color(0xFF14B8A6),
+                  ),
                   const StatusBadge(
-                      label: 'Review jawaban',
-                      icon: Icons.fact_check_outlined,
-                      color: Color(0xFF1D4ED8)),
+                    label: 'Review jawaban',
+                    icon: Icons.fact_check_outlined,
+                    color: Color(0xFF1D4ED8),
+                  ),
                   StatusBadge(
                     label: SupabaseService.instance.isReady
                         ? 'Database aktif'
@@ -193,11 +285,15 @@ class _FeatureCard extends StatelessWidget {
         children: [
           Icon(icon, color: Theme.of(context).colorScheme.primary),
           const SizedBox(height: 12),
-          Text(title,
-              style:
-                  const TextStyle(fontSize: 18, fontWeight: FontWeight.w900)),
+          Text(
+            title,
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900),
+          ),
           const SizedBox(height: 6),
-          Text(description, style: const TextStyle(color: Color(0xFF64748B))),
+          Text(
+            description,
+            style: const TextStyle(color: Color(0xFF64748B)),
+          ),
         ],
       ),
     );
