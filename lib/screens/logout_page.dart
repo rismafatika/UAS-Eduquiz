@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-
+import 'logout_page.dart';
 import 'login_page.dart';
 
 class LogoutPage extends StatelessWidget {

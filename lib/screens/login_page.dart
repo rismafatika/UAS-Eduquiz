@@ -7,6 +7,8 @@ import '../services/supabase_service.dart';
 import '../widgets/app_panel.dart';
 import '../widgets/status_badge.dart';
 import 'home_page.dart';
+import '../services/auth_service.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -18,22 +20,29 @@ class LoginPage extends StatefulWidget {
 class _LoginPageState extends State<LoginPage> {
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
   UserRole _role = UserRole.participant;
 
   @override
   void dispose() {
     _nameController.dispose();
     _emailController.dispose();
+    _passwordController.dispose();
     super.dispose();
   }
 
   void _login() {
     final name = _nameController.text.trim();
     final email = _emailController.text.trim();
+    final password = _passwordController.text.trim();
 
-    if (name.isEmpty || email.isEmpty || !email.contains('@')) {
+    if (name.isEmpty ||
+        email.isEmpty ||
+        password.isEmpty ||
+        !email.contains('@')) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Isi nama dan email yang valid.')),
+        const SnackBar(
+            content: Text('Isi semua field dengan data yang valid.')),
       );
       return;
     }
@@ -61,10 +70,12 @@ class _LoginPageState extends State<LoginPage> {
               child: LayoutBuilder(
                 builder: (context, constraints) {
                   final compact = constraints.maxWidth < 820;
-                  final intro = _IntroPanel(isSupabaseReady: SupabaseService.instance.isReady);
+                  final intro = _IntroPanel(
+                      isSupabaseReady: SupabaseService.instance.isReady);
                   final form = _LoginForm(
                     nameController: _nameController,
                     emailController: _emailController,
+                    passwordController: _passwordController,
                     role: _role,
                     onRoleChanged: (role) => setState(() => _role = role),
                     onSubmit: _login,
@@ -116,28 +127,40 @@ class _IntroPanel extends StatelessWidget {
               color: Theme.of(context).colorScheme.primary,
               borderRadius: BorderRadius.circular(8),
             ),
-            child: const Icon(Icons.school_outlined, color: Colors.white, size: 34),
+            child: const Icon(Icons.school_outlined,
+                color: Colors.white, size: 34),
           ),
           const SizedBox(height: 18),
           const Text(
             'EduQuiz',
-            style: TextStyle(fontSize: 38, fontWeight: FontWeight.w900, color: Color(0xFF0F172A)),
+            style: TextStyle(
+                fontSize: 38,
+                fontWeight: FontWeight.w900,
+                color: Color(0xFF0F172A)),
           ),
           const SizedBox(height: 8),
           const Text(
             'Platform kuis kelas dengan room code, lobby peserta, leaderboard otomatis, review jawaban, dan dashboard host.',
-            style: TextStyle(fontSize: 16, height: 1.45, color: Color(0xFF64748B)),
+            style:
+                TextStyle(fontSize: 16, height: 1.45, color: Color(0xFF64748B)),
           ),
           const SizedBox(height: 18),
           Wrap(
             spacing: 8,
             runSpacing: 8,
             children: [
-              const StatusBadge(label: 'Live Quiz', icon: Icons.bolt, color: Color(0xFF14B8A6)),
+              const StatusBadge(
+                  label: 'Live Quiz',
+                  icon: Icons.bolt,
+                  color: Color(0xFF14B8A6)),
               StatusBadge(
                 label: isSupabaseReady ? 'Supabase aktif' : 'Mode lokal',
-                icon: isSupabaseReady ? Icons.cloud_done_outlined : Icons.storage_outlined,
-                color: isSupabaseReady ? const Color(0xFF16A34A) : const Color(0xFFF59E0B),
+                icon: isSupabaseReady
+                    ? Icons.cloud_done_outlined
+                    : Icons.storage_outlined,
+                color: isSupabaseReady
+                    ? const Color(0xFF16A34A)
+                    : const Color(0xFFF59E0B),
               ),
             ],
           ),
@@ -151,6 +174,7 @@ class _LoginForm extends StatelessWidget {
   const _LoginForm({
     required this.nameController,
     required this.emailController,
+    required this.passwordController,
     required this.role,
     required this.onRoleChanged,
     required this.onSubmit,
@@ -158,6 +182,7 @@ class _LoginForm extends StatelessWidget {
 
   final TextEditingController nameController;
   final TextEditingController emailController;
+  final TextEditingController passwordController;
   final UserRole role;
   final ValueChanged<UserRole> onRoleChanged;
   final VoidCallback onSubmit;
@@ -168,29 +193,49 @@ class _LoginForm extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const Text('Authentication Pengguna', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900)),
+          const Text('Authentication Pengguna',
+              style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900)),
           const SizedBox(height: 18),
           TextField(
             controller: nameController,
-            decoration: const InputDecoration(labelText: 'Nama', prefixIcon: Icon(Icons.person_outline)),
+            decoration: const InputDecoration(
+                labelText: 'Nama', prefixIcon: Icon(Icons.person_outline)),
           ),
           const SizedBox(height: 12),
           TextField(
             controller: emailController,
             keyboardType: TextInputType.emailAddress,
-            decoration: const InputDecoration(labelText: 'Email', prefixIcon: Icon(Icons.mail_outline)),
+            decoration: const InputDecoration(
+                labelText: 'Email', prefixIcon: Icon(Icons.mail_outline)),
+          ),
+          TextField(
+            controller: passwordController,
+            obscureText: true,
+            decoration: const InputDecoration(
+              labelText: 'Password',
+              prefixIcon: Icon(Icons.lock_outline),
+            ),
           ),
           const SizedBox(height: 16),
           SegmentedButton<UserRole>(
             segments: const [
-              ButtonSegment(value: UserRole.participant, icon: Icon(Icons.groups_2_outlined), label: Text('Peserta')),
-              ButtonSegment(value: UserRole.host, icon: Icon(Icons.dashboard_outlined), label: Text('Host')),
+              ButtonSegment(
+                  value: UserRole.participant,
+                  icon: Icon(Icons.groups_2_outlined),
+                  label: Text('Peserta')),
+              ButtonSegment(
+                  value: UserRole.host,
+                  icon: Icon(Icons.dashboard_outlined),
+                  label: Text('Host')),
             ],
             selected: {role},
             onSelectionChanged: (value) => onRoleChanged(value.first),
           ),
           const SizedBox(height: 20),
-          FilledButton.icon(onPressed: onSubmit, icon: const Icon(Icons.login), label: const Text('Masuk')),
+          FilledButton.icon(
+              onPressed: onSubmit,
+              icon: const Icon(Icons.login),
+              label: const Text('Masuk')),
         ],
       ),
     );

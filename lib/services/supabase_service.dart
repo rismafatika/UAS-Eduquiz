@@ -1,5 +1,4 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
-
 import '../config/supabase_config.dart';
 import '../data/sample_questions.dart';
 import '../models/app_user.dart';
@@ -21,17 +20,12 @@ class SupabaseService {
   }
 
   Future<void> initialize() async {
-    if (!SupabaseConfig.isConfigured) return;
-
-    try {
-      await Supabase.initialize(
-        url: SupabaseConfig.url,
-        anonKey: SupabaseConfig.anonKey,
-      );
-      _ready = true;
-    } catch (_) {
+    if (!SupabaseConfig.isConfigured) {
       _ready = false;
+      return;
     }
+
+    _ready = true;
   }
 
   Future<void> saveUser(AppUser user) async {
@@ -91,7 +85,9 @@ class SupabaseService {
     if (client == null) return null;
 
     try {
-      final roomData = await client.from('rooms').select().eq('code', code).maybeSingle();
+      final roomData =
+          await client.from('rooms').select().eq('code', code).maybeSingle();
+
       if (roomData == null) return null;
 
       final room = QuizRoom(
@@ -102,13 +98,18 @@ class SupabaseService {
       );
 
       final phaseName = roomData['phase'] as String? ?? QuizPhase.lobby.name;
+
       room.phase = QuizPhase.values.firstWhere(
         (phase) => phase.name == phaseName,
         orElse: () => QuizPhase.lobby,
       );
-      room.currentQuestionIndex = roomData['current_question_index'] as int? ?? 0;
 
-      final participantRows = await client.from('participants').select().eq('room_code', room.code);
+      room.currentQuestionIndex =
+          roomData['current_question_index'] as int? ?? 0;
+
+      final participantRows =
+          await client.from('participants').select().eq('room_code', room.code);
+
       for (final row in participantRows) {
         room.participants.add(
           Participant(
@@ -163,9 +164,13 @@ class SupabaseService {
         'answered_at': DateTime.now().toIso8601String(),
       }, onConflict: 'room_code,participant_name,question_index');
 
-      await client.from('participants').update({
-        'score': participant.score,
-      }).eq('room_code', room.code).eq('name', participant.name);
+      await client
+          .from('participants')
+          .update({
+            'score': participant.score,
+          })
+          .eq('room_code', room.code)
+          .eq('name', participant.name);
     } catch (_) {
       return;
     }

@@ -21,31 +21,38 @@ class HomePage extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-  title: const Text('EduQuiz'),
-  actions: [
-    Padding(
-      padding: const EdgeInsets.only(right: 8),
-      child: Center(
-        child: Text(
-          user.name,
-          style: const TextStyle(
-            fontWeight: FontWeight.w800,
+        title: const Text('EduQuiz'),
+        actions: [
+          Padding(
+            padding: const EdgeInsets.only(right: 8),
+            child: Center(
+              child: Text(
+                user.name,
+                style: const TextStyle(
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ),
           ),
-        ),
+          IconButton(
+            tooltip: 'Logout',
+            icon: const Icon(Icons.logout),
+            onPressed: () async {
+              final logout = await showDialog<bool>(
+                context: context,
+                builder: (_) => const LogoutPage(),
+              );
+
+              if (logout == true && context.mounted) {
+                Navigator.of(context).pushNamedAndRemoveUntil(
+                  '/',
+                  (route) => false,
+                );
+              }
+            },
+          ),
+        ],
       ),
-    ),
-    IconButton(
-      tooltip: 'Logout',
-      icon: const Icon(Icons.logout),
-      onPressed: () {
-        showDialog(
-          context: context,
-          builder: (_) => const LogoutPage(),
-        );
-      },
-    ),
-  ],
-),
       body: ProPage(
         title: isHost ? 'Dashboard Awal Host' : 'Portal Peserta',
         subtitle: isHost
@@ -69,7 +76,9 @@ class HomePage extends StatelessWidget {
                       ),
                       const SizedBox(height: 10),
                       Text(
-                        isHost ? 'Generate kode room dan undang peserta.' : 'Gunakan kode dari host untuk masuk lobby.',
+                        isHost
+                            ? 'Generate kode room dan undang peserta.'
+                            : 'Gunakan kode dari host untuk masuk lobby.',
                         style: const TextStyle(color: Color(0xFF64748B)),
                       ),
                     ],
@@ -78,10 +87,14 @@ class HomePage extends StatelessWidget {
                     onPressed: () {
                       Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (_) => isHost ? CreateRoomPage(user: user) : JoinRoomPage(user: user)),
+                        MaterialPageRoute(
+                            builder: (_) => isHost
+                                ? CreateRoomPage(user: user)
+                                : JoinRoomPage(user: user)),
                       );
                     },
-                    icon: Icon(isHost ? Icons.meeting_room_outlined : Icons.login),
+                    icon: Icon(
+                        isHost ? Icons.meeting_room_outlined : Icons.login),
                     label: Text(isHost ? 'Buat Room Code' : 'Gabung Room'),
                   ),
                 ],
@@ -92,19 +105,37 @@ class HomePage extends StatelessWidget {
               builder: (context, constraints) {
                 final compact = constraints.maxWidth < 760;
                 final cards = [
-                  const _FeatureCard(icon: Icons.verified_user_outlined, title: 'Auth', description: 'Login pengguna host dan peserta.'),
-                  const _FeatureCard(icon: Icons.pin_outlined, title: 'Room Code', description: 'Kode unik untuk setiap sesi kuis.'),
-                  const _FeatureCard(icon: Icons.leaderboard_outlined, title: 'Leaderboard', description: 'Skor peserta otomatis terurut.'),
+                  const _FeatureCard(
+                      icon: Icons.verified_user_outlined,
+                      title: 'Auth',
+                      description: 'Login pengguna host dan peserta.'),
+                  const _FeatureCard(
+                      icon: Icons.pin_outlined,
+                      title: 'Room Code',
+                      description: 'Kode unik untuk setiap sesi kuis.'),
+                  const _FeatureCard(
+                      icon: Icons.leaderboard_outlined,
+                      title: 'Leaderboard',
+                      description: 'Skor peserta otomatis terurut.'),
                 ];
 
                 if (compact) {
                   return Column(
-                    children: cards.map((card) => Padding(padding: const EdgeInsets.only(bottom: 10), child: card)).toList(),
+                    children: cards
+                        .map((card) => Padding(
+                            padding: const EdgeInsets.only(bottom: 10),
+                            child: card))
+                        .toList(),
                   );
                 }
 
                 return Row(
-                  children: cards.map((card) => Expanded(child: Padding(padding: const EdgeInsets.only(right: 10), child: card))).toList(),
+                  children: cards
+                      .map((card) => Expanded(
+                          child: Padding(
+                              padding: const EdgeInsets.only(right: 10),
+                              child: card)))
+                      .toList(),
                 );
               },
             ),
@@ -114,12 +145,24 @@ class HomePage extends StatelessWidget {
                 spacing: 8,
                 runSpacing: 8,
                 children: [
-                  const StatusBadge(label: 'Quiz real-time', icon: Icons.bolt, color: Color(0xFF14B8A6)),
-                  const StatusBadge(label: 'Review jawaban', icon: Icons.fact_check_outlined, color: Color(0xFF1D4ED8)),
+                  const StatusBadge(
+                      label: 'Quiz real-time',
+                      icon: Icons.bolt,
+                      color: Color(0xFF14B8A6)),
+                  const StatusBadge(
+                      label: 'Review jawaban',
+                      icon: Icons.fact_check_outlined,
+                      color: Color(0xFF1D4ED8)),
                   StatusBadge(
-                    label: SupabaseService.instance.isReady ? 'Database aktif' : 'Database belum dikonfigurasi',
-                    icon: SupabaseService.instance.isReady ? Icons.cloud_done_outlined : Icons.cloud_off_outlined,
-                    color: SupabaseService.instance.isReady ? const Color(0xFF16A34A) : const Color(0xFFF59E0B),
+                    label: SupabaseService.instance.isReady
+                        ? 'Database aktif'
+                        : 'Database belum dikonfigurasi',
+                    icon: SupabaseService.instance.isReady
+                        ? Icons.cloud_done_outlined
+                        : Icons.cloud_off_outlined,
+                    color: SupabaseService.instance.isReady
+                        ? const Color(0xFF16A34A)
+                        : const Color(0xFFF59E0B),
                   ),
                 ],
               ),
@@ -150,7 +193,9 @@ class _FeatureCard extends StatelessWidget {
         children: [
           Icon(icon, color: Theme.of(context).colorScheme.primary),
           const SizedBox(height: 12),
-          Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900)),
+          Text(title,
+              style:
+                  const TextStyle(fontSize: 18, fontWeight: FontWeight.w900)),
           const SizedBox(height: 6),
           Text(description, style: const TextStyle(color: Color(0xFF64748B))),
         ],
