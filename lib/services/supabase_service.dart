@@ -175,4 +175,9 @@ class SupabaseService {
       return;
     }
   }
+
+  // sesudah
+  Future<void> signOut() async {
+    await Supabase.instance.client.auth.signOut();
+  }
 }
