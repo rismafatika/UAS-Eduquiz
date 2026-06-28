@@ -1,5 +1,4 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
-
 import '../config/supabase_config.dart';
 import '../data/sample_questions.dart';
 import '../models/app_user.dart';
@@ -21,23 +20,12 @@ class SupabaseService {
   }
 
   Future<void> initialize() async {
-    print("=== SUPABASE INIT ===");
-    print("URL: ${SupabaseConfig.url}");
-    print("Configured: ${SupabaseConfig.isConfigured}");
-
     if (!SupabaseConfig.isConfigured) {
-      print("Supabase belum dikonfigurasi!");
       _ready = false;
       return;
     }
 
-    try {
-      _ready = true;
-      print("Supabase Ready = $_ready");
-    } catch (e) {
-      print("ERROR INIT: $e");
-      _ready = false;
-    }
+    _ready = true;
   }
 
   Future<void> saveUser(AppUser user) async {

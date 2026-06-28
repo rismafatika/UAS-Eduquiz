@@ -5,6 +5,7 @@ enum UserRole {
 
 class AppUser {
   const AppUser({
+    this.uid,
     required this.name,
     required this.email,
     required this.role,
@@ -20,6 +21,9 @@ class AppUser {
     this.isOnline = true,
   });
 
+  /// UID dari Supabase Auth
+  final String? uid;
+
   // Basic Info
   final String name;
   final String email;
@@ -31,11 +35,12 @@ class AppUser {
   final int xp;
   final int level;
 
-  // Profile & Lobby
+  // Profile
   final String? avatar;
   final bool isOnline;
 
   AppUser copyWith({
+    String? uid,
     String? name,
     String? email,
     UserRole? role,
@@ -47,6 +52,7 @@ class AppUser {
     bool? isOnline,
   }) {
     return AppUser(
+      uid: uid ?? this.uid,
       name: name ?? this.name,
       email: email ?? this.email,
       role: role ?? this.role,
@@ -72,6 +78,6 @@ class AppUser {
 
   @override
   String toString() {
-    return 'AppUser(name: $name, score: $score, level: $level)';
+    return 'AppUser(uid: $uid, name: $name, email: $email, level: $level)';
   }
 }
