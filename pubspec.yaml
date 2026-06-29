@@ -20,3 +20,10 @@ dev_dependencies:
 flutter:
   uses-material-design: true
 
+flutter_animate:
+
+google_fonts:
+
+fl_chart:
+
+lottie:
