@@ -3,11 +3,13 @@ import 'package:flutter/material.dart';
 import '../models/app_user.dart';
 import '../models/participant.dart';
 import '../models/quiz_room.dart';
+import '../models/quiz_result.dart';
 import '../services/room_service.dart';
 import '../widgets/app_panel.dart';
 import '../widgets/room_header.dart';
 import '../widgets/section_title.dart';
 import 'leaderboard_page.dart';
+import 'manage_questions_page.dart';
 import 'quiz_live_page.dart';
 import 'review_page.dart';
 
@@ -50,6 +52,15 @@ class _HostDashboardPageState extends State<HostDashboardPage> {
                 LeaderboardPage(user: widget.user, room: widget.room)));
   }
 
+  void _openManageQuestions() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => ManageQuestionsPage(user: widget.user, room: widget.room),
+      ),
+    ).then((_) => setState(() {}));
+  }
+
   void _addDemoParticipant() {
     setState(() {
       RoomService.instance.addParticipant(
@@ -77,6 +88,13 @@ class _HostDashboardPageState extends State<HostDashboardPage> {
         : widget.room.participants
             .map((participant) => participant.streak)
             .reduce((a, b) => a > b ? a : b);
+    final participantResults = widget.room.participants
+        .where((participant) => participant.answers.isNotEmpty)
+        .map((participant) => RoomService.instance.resultForParticipant(
+              room: widget.room,
+              participant: participant,
+            ))
+        .toList();
 
     return Scaffold(
       appBar: AppBar(title: const Text('Dashboard Host')),
@@ -159,6 +177,10 @@ class _HostDashboardPageState extends State<HostDashboardPage> {
                                 icon: const Icon(Icons.rate_review_outlined),
                                 label: const Text('Review Jawaban')),
                             OutlinedButton.icon(
+                                onPressed: _openManageQuestions,
+                                icon: const Icon(Icons.edit_note_outlined),
+                                label: const Text('Kelola Soal')),
+                            OutlinedButton.icon(
                                 onPressed: _addDemoParticipant,
                                 icon:
                                     const Icon(Icons.person_add_alt_1_outlined),
@@ -172,11 +194,78 @@ class _HostDashboardPageState extends State<HostDashboardPage> {
                       ],
                     ),
                   ),
+                  const SizedBox(height: 16),
+                  AppPanel(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const SectionTitle(
+                            icon: Icons.assignment_turned_in_outlined,
+                            title: 'Hasil Peserta'),
+                        const SizedBox(height: 12),
+                        if (participantResults.isEmpty)
+                          const Text(
+                            'Belum ada peserta yang menjawab quiz.',
+                            style: TextStyle(color: Color(0xFF64748B)),
+                          )
+                        else
+                          for (final result in participantResults)
+                            _ParticipantResultRow(result: result),
+                      ],
+                    ),
+                  ),
                 ],
               ),
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _ParticipantResultRow extends StatelessWidget {
+  const _ParticipantResultRow({required this.result});
+
+  final QuizResult result;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: const Color(0xFFE5E7EB)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 42,
+            height: 42,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: const Color(0xFFEEF2FF),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Text(result.grade, style: const TextStyle(fontWeight: FontWeight.w900)),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(result.participantName, style: const TextStyle(fontWeight: FontWeight.w800)),
+                Text(
+                  '${result.correctAnswers} benar - ${result.wrongAnswers} salah - ${result.percentage.toStringAsFixed(1)}%',
+                  style: const TextStyle(color: Color(0xFF64748B), fontSize: 12),
+                ),
+              ],
+            ),
+          ),
+          Text('${result.totalScore} poin', style: const TextStyle(fontWeight: FontWeight.w800)),
+        ],
       ),
     );
   }

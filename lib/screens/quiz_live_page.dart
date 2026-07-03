@@ -7,6 +7,7 @@ import '../services/room_service.dart';
 import '../widgets/app_panel.dart';
 import '../widgets/room_header.dart';
 import 'leaderboard_page.dart';
+import 'quiz_result_page.dart';
 
 class QuizLivePage extends StatefulWidget {
   const QuizLivePage({super.key, required this.user, required this.room});
@@ -36,11 +37,27 @@ class _QuizLivePageState extends State<QuizLivePage> {
   void _nextQuestion() {
     setState(() => RoomService.instance.advanceQuestion(widget.room));
     if (widget.room.phase == QuizPhase.leaderboard) {
+      if (_isHost) {
+        Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+                builder: (_) =>
+                    LeaderboardPage(user: widget.user, room: widget.room)));
+        return;
+      }
+
+      final result = RoomService.instance.completeParticipantQuiz(
+        room: widget.room,
+        participant: _participant,
+      );
       Navigator.pushReplacement(
           context,
           MaterialPageRoute(
-              builder: (_) =>
-                  LeaderboardPage(user: widget.user, room: widget.room)));
+              builder: (_) => QuizResultPage(
+                    user: widget.user,
+                    room: widget.room,
+                    result: result,
+                  )));
     }
   }
 
