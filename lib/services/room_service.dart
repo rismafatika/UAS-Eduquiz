@@ -3,6 +3,7 @@ import 'dart:math';
 
 import '../data/sample_questions.dart';
 import '../models/participant.dart';
+import '../models/quiz_question.dart';
 import '../models/quiz_room.dart';
 import 'supabase_service.dart';
 
@@ -57,17 +58,60 @@ class RoomService {
 
     final participant = Participant(name: name);
     room.participants.add(participant);
-    unawaited(SupabaseService.instance.addParticipant(room: room, participant: participant));
+
+    unawaited(
+      SupabaseService.instance.addParticipant(
+        room: room,
+        participant: participant,
+      ),
+    );
+
     return participant;
   }
+
+  // ============================
+  // MANAJEMEN SOAL
+  // ============================
+
+  void addQuestion(QuizRoom room, QuizQuestion question) {
+    room.questions.add(question);
+    unawaited(SupabaseService.instance.updateRoom(room));
+  }
+
+  void updateQuestion(
+    QuizRoom room,
+    int index,
+    QuizQuestion question,
+  ) {
+    if (index < 0 || index >= room.questions.length) return;
+
+    room.questions[index] = question;
+    unawaited(SupabaseService.instance.updateRoom(room));
+  }
+
+  void removeQuestion(
+    QuizRoom room,
+    int index,
+  ) {
+    if (index < 0 || index >= room.questions.length) return;
+
+    room.questions.removeAt(index);
+    unawaited(SupabaseService.instance.updateRoom(room));
+  }
+
+  // ============================
+  // QUIZ
+  // ============================
 
   void startQuiz(QuizRoom room) {
     room.phase = QuizPhase.live;
     room.currentQuestionIndex = 0;
+
     for (final participant in room.participants) {
       participant.score = 0;
       participant.answers.clear();
     }
+
     unawaited(SupabaseService.instance.updateRoom(room));
   }
 
@@ -81,6 +125,7 @@ class RoomService {
     final isCorrect = answerIndex == question.correctIndex;
 
     participant.answers[questionIndex] = answerIndex;
+
     if (isCorrect) {
       participant.score += 100;
     }
@@ -95,13 +140,18 @@ class RoomService {
       ),
     );
 
-    _simulateOtherParticipants(room, questionIndex, participant.name);
+    _simulateOtherParticipants(
+      room,
+      questionIndex,
+      participant.name,
+    );
 
     if (questionIndex == room.questions.length - 1) {
       room.phase = QuizPhase.leaderboard;
     } else {
       room.currentQuestionIndex++;
     }
+
     unawaited(SupabaseService.instance.updateRoom(room));
   }
 
@@ -123,27 +173,38 @@ class RoomService {
   String _generateCode() {
     const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
     final random = Random();
+
     String code;
 
     do {
-      code = List.generate(6, (_) => chars[random.nextInt(chars.length)]).join();
+      code = List.generate(
+        6,
+        (_) => chars[random.nextInt(chars.length)],
+      ).join();
     } while (_rooms.containsKey(code));
 
     return code;
   }
 
-  void _simulateOtherParticipants(QuizRoom room, int questionIndex, String activeName) {
+  void _simulateOtherParticipants(
+    QuizRoom room,
+    int questionIndex,
+    String activeName,
+  ) {
     final random = Random();
     final question = room.questions[questionIndex];
 
     for (final participant in room.participants) {
-      if (participant.name == activeName || participant.answers.containsKey(questionIndex)) {
+      if (participant.name == activeName ||
+          participant.answers.containsKey(questionIndex)) {
         continue;
       }
 
       final answer = random.nextInt(question.options.length);
       final isCorrect = answer == question.correctIndex;
+
       participant.answers[questionIndex] = answer;
+
       if (isCorrect) {
         participant.score += 100;
       }
