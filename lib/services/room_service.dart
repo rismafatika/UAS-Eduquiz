@@ -3,6 +3,7 @@ import 'dart:math';
 
 import '../data/sample_questions.dart';
 import '../models/participant.dart';
+import '../models/quiz_question.dart';
 import '../models/quiz_room.dart';
 import 'supabase_service.dart';
 
@@ -57,7 +58,8 @@ class RoomService {
 
     final participant = Participant(name: name);
     room.participants.add(participant);
-    unawaited(SupabaseService.instance.addParticipant(room: room, participant: participant));
+    unawaited(SupabaseService.instance
+        .addParticipant(room: room, participant: participant));
     return participant;
   }
 
@@ -120,24 +122,44 @@ class RoomService {
     unawaited(SupabaseService.instance.updateRoom(room));
   }
 
+  // ── Tambah soal baru ke room ──
+  void addQuestion(QuizRoom room, QuizQuestion question) {
+    room.questions.add(question);
+  }
+
+  // ── Update soal di room berdasarkan index ──
+  void updateQuestion(QuizRoom room, int index, QuizQuestion question) {
+    if (index < 0 || index >= room.questions.length) return;
+    room.questions[index] = question;
+  }
+
+  // ── Hapus soal dari room berdasarkan index ──
+  void removeQuestion(QuizRoom room, int index) {
+    if (index < 0 || index >= room.questions.length) return;
+    room.questions.removeAt(index);
+  }
+
   String _generateCode() {
     const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
     final random = Random();
     String code;
 
     do {
-      code = List.generate(6, (_) => chars[random.nextInt(chars.length)]).join();
+      code =
+          List.generate(6, (_) => chars[random.nextInt(chars.length)]).join();
     } while (_rooms.containsKey(code));
 
     return code;
   }
 
-  void _simulateOtherParticipants(QuizRoom room, int questionIndex, String activeName) {
+  void _simulateOtherParticipants(
+      QuizRoom room, int questionIndex, String activeName) {
     final random = Random();
     final question = room.questions[questionIndex];
 
     for (final participant in room.participants) {
-      if (participant.name == activeName || participant.answers.containsKey(questionIndex)) {
+      if (participant.name == activeName ||
+          participant.answers.containsKey(questionIndex)) {
         continue;
       }
 
