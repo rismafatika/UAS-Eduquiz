@@ -2,25 +2,20 @@ import 'package:flutter/material.dart';
 
 import '../models/app_user.dart';
 import '../models/participant.dart';
+import '../models/quiz_question.dart';
 import '../models/quiz_room.dart';
 import '../services/room_service.dart';
+import '../widgets/app_panel.dart';
+import '../widgets/pro_page.dart';
 import '../widgets/room_header.dart';
+import '../widgets/section_title.dart';
+import '../widgets/status_badge.dart';
 import 'quiz_live_page.dart';
 import 'review_page.dart';
 
-class _C {
-  static const orange = Color(0xFFEA580C);
-  static const orangeBg = Color(0xFFFEF3C7);
-  static const bg = Color(0xFFF8FAFC);
-  static const card = Color(0xFFFFFFFF);
-  static const dark = Color(0xFF0F172A);
-  static const body = Color(0xFF334155);
-  static const muted = Color(0xFF94A3B8);
-  static const border = Color(0xFFE2E8F0);
-}
-
 class HostDashboardPage extends StatefulWidget {
   const HostDashboardPage({super.key, required this.user, required this.room});
+
   final AppUser user;
   final QuizRoom room;
 
@@ -29,781 +24,557 @@ class HostDashboardPage extends StatefulWidget {
 }
 
 class _HostDashboardPageState extends State<HostDashboardPage> {
-  int _tab = 0; // 0=Overview 1=Peserta 2=Rekap
-
-  int get _totalAnswers =>
-      widget.room.participants.fold(0, (sum, p) => sum + p.answers.length);
-  int get _maxAnswers =>
-      widget.room.participants.length * widget.room.questions.length;
-  double get _avgScore => widget.room.participants.isEmpty
-      ? 0
-      : widget.room.participants.map((p) => p.score).reduce((a, b) => a + b) /
-          widget.room.participants.length;
-
   void _restartQuiz() {
     setState(() => RoomService.instance.startQuiz(widget.room));
     Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-            builder: (_) =>
-                QuizLivePage(user: widget.user, room: widget.room)));
+      context,
+      MaterialPageRoute(builder: (_) => QuizLivePage(user: widget.user, room: widget.room)),
+    );
   }
 
   void _openReview() {
     RoomService.instance.showReview(widget.room);
     Navigator.push(
-        context,
-        MaterialPageRoute(
-            builder: (_) => ReviewPage(user: widget.user, room: widget.room)));
+      context,
+      MaterialPageRoute(builder: (_) => ReviewPage(user: widget.user, room: widget.room)),
+    );
+  }
+
+  Future<void> _addQuestion() async {
+    final question = await showDialog<QuizQuestion>(
+      context: context,
+      builder: (_) => const _QuestionEditorDialog(),
+    );
+
+    if (!mounted || question == null) return;
+    setState(() => RoomService.instance.addQuestion(widget.room, question));
+  }
+
+  Future<void> _editQuestion(int index) async {
+    final question = await showDialog<QuizQuestion>(
+      context: context,
+      builder: (_) => _QuestionEditorDialog(initialQuestion: widget.room.questions[index]),
+    );
+
+    if (!mounted || question == null) return;
+    setState(() => RoomService.instance.updateQuestion(widget.room, index, question));
+  }
+
+  Future<void> _deleteQuestion(int index) async {
+    if (widget.room.questions.length <= 1) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Minimal harus ada 1 soal.')),
+      );
+      return;
+    }
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Hapus soal?'),
+        content: Text('Soal nomor ${index + 1} akan dihapus dari quiz.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Batal')),
+          FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Hapus')),
+        ],
+      ),
+    );
+
+    if (!mounted || confirmed != true) return;
+    setState(() => RoomService.instance.removeQuestion(widget.room, index));
   }
 
   @override
   Widget build(BuildContext context) {
+    final totalAnswers = widget.room.participants.fold<int>(
+      0,
+      (sum, participant) => sum + participant.answers.length,
+    );
+    final maxAnswers = widget.room.participants.length * widget.room.questions.length;
+    final averageScore = widget.room.participants.isEmpty
+        ? 0
+        : widget.room.participants.map((participant) => participant.score).reduce((a, b) => a + b) /
+            widget.room.participants.length;
+    final rankedParticipants = [...widget.room.participants]..sort((a, b) => b.score.compareTo(a.score));
+
     return Scaffold(
-      backgroundColor: _C.bg,
-      body: Column(
-        children: [
-          _buildHeader(),
-          _buildTabBar(),
-          Expanded(
-              child: AnimatedSwitcher(
-            duration: const Duration(milliseconds: 250),
-            child: _buildContent(),
-          )),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildHeader() {
-    return Container(
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFFEA580C), Color(0xFFD97706)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: const BorderRadius.vertical(bottom: Radius.circular(24)),
-        boxShadow: [
-          BoxShadow(
-              color: _C.orange.withOpacity(0.35),
-              blurRadius: 20,
-              offset: const Offset(0, 8))
-        ],
-      ),
-      padding: const EdgeInsets.fromLTRB(20, 0, 20, 22),
-      child: SafeArea(
-        bottom: false,
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          // Top bar
-          Row(children: [
-            GestureDetector(
-              onTap: () => Navigator.pop(context),
-              child: Container(
-                width: 36,
-                height: 36,
-                decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(10)),
-                child: const Icon(Icons.arrow_back_rounded,
-                    color: Colors.white, size: 18),
-              ),
+      appBar: AppBar(title: const Text('Dashboard Admin')),
+      body: ProPage(
+        title: 'Dashboard Admin',
+        subtitle: 'Kelola soal, pantau nilai peserta, dan kontrol jalannya sesi quiz dari satu halaman.',
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            RoomHeader(room: widget.room),
+            const SizedBox(height: 16),
+            _MetricGrid(
+              participantCount: widget.room.participants.length,
+              questionCount: widget.room.questions.length,
+              answerSummary: '$totalAnswers/$maxAnswers',
+              averageScore: averageScore.toStringAsFixed(0),
             ),
-            const SizedBox(width: 12),
-            const Text('Dashboard Host',
-                style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 17,
-                    fontWeight: FontWeight.w800)),
-            const Spacer(),
-            // Room code badge
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(20)),
-              child: Row(mainAxisSize: MainAxisSize.min, children: [
-                const Icon(Icons.pin_outlined, color: Colors.white, size: 14),
-                const SizedBox(width: 5),
-                Text(widget.room.code,
-                    style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 13,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: 2)),
-              ]),
-            ),
-          ]),
-          const SizedBox(height: 18),
-          Text(widget.room.title,
-              style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 22,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: -0.5)),
-          const SizedBox(height: 4),
-          Text('Host: ${widget.user.name}',
-              style: TextStyle(
-                  color: Colors.white.withOpacity(0.75), fontSize: 13)),
-          const SizedBox(height: 16),
-          // Metrik row
-          Row(children: [
-            _HeaderMetric(
-                label: 'Peserta',
-                value: '${widget.room.participants.length}',
-                icon: Icons.groups_2_outlined),
-            _VDivider(),
-            _HeaderMetric(
-                label: 'Jawaban',
-                value: '$_totalAnswers/$_maxAnswers',
-                icon: Icons.checklist_rtl_outlined),
-            _VDivider(),
-            _HeaderMetric(
-                label: 'Rata-rata',
-                value: _avgScore.toStringAsFixed(0),
-                icon: Icons.bar_chart_rounded),
-          ]),
-        ]),
-      ),
-    );
-  }
-
-  Widget _buildTabBar() {
-    final tabs = [
-      ('Overview', Icons.dashboard_outlined),
-      ('Peserta', Icons.people_outline),
-      ('Rekap Nilai', Icons.analytics_outlined)
-    ];
-    return Container(
-      color: Colors.white,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      child: Row(
-          children: List.generate(tabs.length, (i) {
-        final active = _tab == i;
-        return Padding(
-          padding: const EdgeInsets.only(right: 8),
-          child: GestureDetector(
-            onTap: () => setState(() => _tab = i),
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 200),
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-              decoration: BoxDecoration(
-                color: active ? _C.orange : const Color(0xFFF1F5F9),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Row(mainAxisSize: MainAxisSize.min, children: [
-                Icon(tabs[i].$2,
-                    size: 15, color: active ? Colors.white : _C.muted),
-                const SizedBox(width: 5),
-                Text(tabs[i].$1,
-                    style: TextStyle(
-                      fontSize: 12.5,
-                      fontWeight: FontWeight.w700,
-                      color: active ? Colors.white : _C.muted,
-                    )),
-              ]),
-            ),
-          ),
-        );
-      })),
-    );
-  }
-
-  Widget _buildContent() {
-    switch (_tab) {
-      case 1:
-        return _PesertaTab(room: widget.room);
-      case 2:
-        return _RekapTab(room: widget.room, avgScore: _avgScore);
-      default:
-        return _OverviewTab(
-            room: widget.room, onRestart: _restartQuiz, onReview: _openReview);
-    }
-  }
-}
-
-// ── Tab Overview ──
-class _OverviewTab extends StatelessWidget {
-  const _OverviewTab(
-      {required this.room, required this.onRestart, required this.onReview});
-  final QuizRoom room;
-  final VoidCallback onRestart, onReview;
-
-  @override
-  Widget build(BuildContext context) {
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      children: [
-        // Kontrol
-        Container(
-          padding: const EdgeInsets.all(18),
-          decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(18),
-              boxShadow: [
-                BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
-                    blurRadius: 12,
-                    offset: const Offset(0, 4))
-              ]),
-          child:
-              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            const Text('Kontrol Sesi',
-                style: TextStyle(
-                    fontSize: 15, fontWeight: FontWeight.w800, color: _C.dark)),
-            const SizedBox(height: 14),
-            Row(children: [
-              Expanded(
-                  child: SizedBox(
-                      height: 46,
-                      child: DecoratedBox(
-                        decoration: BoxDecoration(
-                          gradient: const LinearGradient(
-                              colors: [Color(0xFFEA580C), Color(0xFFD97706)]),
-                          borderRadius: BorderRadius.circular(13),
-                          boxShadow: [
-                            BoxShadow(
-                                color: _C.orange.withOpacity(0.35),
-                                blurRadius: 14,
-                                offset: const Offset(0, 6))
-                          ],
-                        ),
-                        child: ElevatedButton.icon(
-                          onPressed: onRestart,
-                          style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.transparent,
-                              shadowColor: Colors.transparent,
-                              shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(13))),
-                          icon: const Icon(Icons.refresh_rounded,
-                              color: Colors.white, size: 18),
-                          label: const Text('Mulai Ulang',
-                              style: TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.w700)),
-                        ),
-                      ))),
-              const SizedBox(width: 10),
-              Expanded(
-                  child: SizedBox(
-                      height: 46,
-                      child: OutlinedButton.icon(
-                        onPressed: onReview,
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: _C.orange,
-                          side: const BorderSide(
-                              color: Color(0xFFEA580C), width: 1.5),
-                          shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(13)),
-                        ),
-                        icon: const Icon(Icons.rate_review_outlined, size: 18),
-                        label: const Text('Review',
-                            style: TextStyle(fontWeight: FontWeight.w700)),
-                      ))),
-            ]),
-          ]),
-        ),
-        const SizedBox(height: 16),
-        // Progress per peserta
-        Container(
-          padding: const EdgeInsets.all(18),
-          decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(18),
-              boxShadow: [
-                BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
-                    blurRadius: 12,
-                    offset: const Offset(0, 4))
-              ]),
-          child:
-              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Row(children: [
-              const Text('Progres Peserta',
-                  style: TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w800,
-                      color: _C.dark)),
-              const Spacer(),
-              Text('${room.participants.length} orang',
-                  style: const TextStyle(fontSize: 12, color: _C.muted)),
-            ]),
-            const SizedBox(height: 14),
-            if (room.participants.isEmpty)
-              const Center(
-                  child: Padding(
-                padding: EdgeInsets.symmetric(vertical: 20),
-                child: Text('Belum ada peserta bergabung',
-                    style: TextStyle(color: _C.muted)),
-              ))
-            else
-              ...room.participants
-                  .map((p) => _ProgressRow(participant: p, room: room)),
-          ]),
-        ),
-      ],
-    );
-  }
-}
-
-// ── Tab Peserta ──
-class _PesertaTab extends StatelessWidget {
-  const _PesertaTab({required this.room});
-  final QuizRoom room;
-
-  @override
-  Widget build(BuildContext context) {
-    if (room.participants.isEmpty) {
-      return const Center(
-          child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-        Icon(Icons.people_outline, size: 48, color: _C.muted),
-        SizedBox(height: 12),
-        Text('Belum ada peserta',
-            style: TextStyle(fontSize: 15, color: _C.muted)),
-      ]));
-    }
-
-    final sorted = [...room.participants]
-      ..sort((a, b) => b.score.compareTo(a.score));
-
-    return ListView.separated(
-      padding: const EdgeInsets.all(16),
-      itemCount: sorted.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 10),
-      itemBuilder: (_, i) {
-        final p = sorted[i];
-        final rank = i + 1;
-        final rankColor = rank == 1
-            ? const Color(0xFFF59E0B)
-            : rank == 2
-                ? const Color(0xFF94A3B8)
-                : rank == 3
-                    ? const Color(0xFFCD7F32)
-                    : _C.muted;
-        final initials = p.name
-            .trim()
-            .split(' ')
-            .take(2)
-            .map((w) => w[0].toUpperCase())
-            .join();
-        return Container(
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(14),
-            border: rank <= 3
-                ? Border.all(color: rankColor.withOpacity(0.35), width: 1.5)
-                : null,
-            boxShadow: [
-              BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
-                  blurRadius: 10,
-                  offset: const Offset(0, 3))
-            ],
-          ),
-          child: Row(children: [
-            Container(
-                width: 36,
-                height: 36,
-                decoration: BoxDecoration(
-                    color: rankColor.withOpacity(0.12), shape: BoxShape.circle),
-                child: Center(
-                    child: rank <= 3
-                        ? Icon(Icons.emoji_events_rounded,
-                            color: rankColor, size: 18)
-                        : Text('#$rank',
-                            style: TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w800,
-                                color: rankColor)))),
-            const SizedBox(width: 10),
-            Container(
-                width: 36,
-                height: 36,
-                decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                        colors: [_C.orange, _C.orange.withOpacity(0.7)]),
-                    shape: BoxShape.circle),
-                child: Center(
-                    child: Text(initials,
-                        style: const TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w800,
-                            color: Colors.white)))),
-            const SizedBox(width: 10),
-            Expanded(
-                child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+            const SizedBox(height: 16),
+            AppPanel(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const SectionTitle(icon: Icons.tune, title: 'Kontrol Sesi'),
+                  const SizedBox(height: 14),
+                  Wrap(
+                    spacing: 10,
+                    runSpacing: 10,
                     children: [
-                  Text(p.name,
-                      style: const TextStyle(
-                          fontSize: 13.5,
-                          fontWeight: FontWeight.w700,
-                          color: _C.dark)),
-                  Text('${p.answers.length}/${room.questions.length} dijawab',
-                      style: const TextStyle(fontSize: 11.5, color: _C.muted)),
-                ])),
-            Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
-              Text('${p.score}',
-                  style: const TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.w900,
-                      color: _C.orange)),
-              const Text('poin',
-                  style: TextStyle(fontSize: 10.5, color: _C.muted)),
-            ]),
-          ]),
+                      FilledButton.icon(
+                        onPressed: _restartQuiz,
+                        icon: const Icon(Icons.refresh),
+                        label: const Text('Mulai Ulang Quiz'),
+                      ),
+                      OutlinedButton.icon(
+                        onPressed: _openReview,
+                        icon: const Icon(Icons.rate_review_outlined),
+                        label: const Text('Review Jawaban'),
+                      ),
+                      OutlinedButton.icon(
+                        onPressed: _addQuestion,
+                        icon: const Icon(Icons.add_circle_outline),
+                        label: const Text('Tambah Soal'),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            _ScoreBoard(participants: rankedParticipants, questionCount: widget.room.questions.length),
+            const SizedBox(height: 16),
+            _QuestionManager(
+              questions: widget.room.questions,
+              onAdd: _addQuestion,
+              onEdit: _editQuestion,
+              onDelete: _deleteQuestion,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _MetricGrid extends StatelessWidget {
+  const _MetricGrid({
+    required this.participantCount,
+    required this.questionCount,
+    required this.answerSummary,
+    required this.averageScore,
+  });
+
+  final int participantCount;
+  final int questionCount;
+  final String answerSummary;
+  final String averageScore;
+
+  @override
+  Widget build(BuildContext context) {
+    final cards = [
+      _MetricCard(label: 'Peserta', value: '$participantCount', icon: Icons.groups_2_outlined, color: const Color(0xFF1D4ED8)),
+      _MetricCard(label: 'Soal', value: '$questionCount', icon: Icons.quiz_outlined, color: const Color(0xFF14B8A6)),
+      _MetricCard(label: 'Jawaban', value: answerSummary, icon: Icons.checklist_rtl, color: const Color(0xFFF59E0B)),
+      _MetricCard(label: 'Rata-rata', value: averageScore, icon: Icons.bar_chart, color: const Color(0xFF7C3AED)),
+    ];
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final compact = constraints.maxWidth < 760;
+        if (compact) {
+          return Column(
+            children: cards.map((card) => Padding(padding: const EdgeInsets.only(bottom: 10), child: card)).toList(),
+          );
+        }
+
+        return Row(
+          children: cards.map((card) => Expanded(child: Padding(padding: const EdgeInsets.only(right: 10), child: card))).toList(),
         );
       },
     );
   }
 }
 
-// ── Tab Rekap Nilai ──
-class _RekapTab extends StatelessWidget {
-  const _RekapTab({required this.room, required this.avgScore});
-  final QuizRoom room;
-  final double avgScore;
+class _MetricCard extends StatelessWidget {
+  const _MetricCard({
+    required this.label,
+    required this.value,
+    required this.icon,
+    required this.color,
+  });
+
+  final String label;
+  final String value;
+  final IconData icon;
+  final Color color;
 
   @override
   Widget build(BuildContext context) {
-    if (room.participants.isEmpty) {
-      return const Center(
-          child:
-              Text('Belum ada data rekap', style: TextStyle(color: _C.muted)));
-    }
-
-    final sorted = [...room.participants]
-      ..sort((a, b) => b.score.compareTo(a.score));
-    final lulus = sorted.where((p) => p.score >= 70).length;
-    final maxScore = sorted.first.score;
-
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      children: [
-        // Ringkasan
-        Container(
-          padding: const EdgeInsets.all(18),
-          decoration: BoxDecoration(
-            gradient: const LinearGradient(
-                colors: [Color(0xFFEA580C), Color(0xFFD97706)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight),
-            borderRadius: BorderRadius.circular(20),
-            boxShadow: [
-              BoxShadow(
-                  color: _C.orange.withOpacity(0.35),
-                  blurRadius: 16,
-                  offset: const Offset(0, 6))
+    return AppPanel(
+      child: Row(
+        children: [
+          Container(
+            width: 42,
+            height: 42,
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(icon, color: color),
+          ),
+          const SizedBox(width: 12),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(value, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900)),
+              Text(label, style: const TextStyle(color: Color(0xFF64748B))),
             ],
           ),
-          child: Row(children: [
-            Expanded(
-                child: _SummaryItem(
-                    label: 'Peserta',
-                    value: '${sorted.length}',
-                    icon: Icons.group_outlined)),
-            _VLine(),
-            Expanded(
-                child: _SummaryItem(
-                    label: 'Rata-rata',
-                    value: avgScore.toStringAsFixed(1),
-                    icon: Icons.bar_chart_rounded)),
-            _VLine(),
-            Expanded(
-                child: _SummaryItem(
-                    label: 'Lulus (≥70)',
-                    value: '$lulus',
-                    icon: Icons.check_circle_outline)),
-          ]),
-        ),
-        const SizedBox(height: 14),
-        // Progress kelulusan
-        Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(14),
-              boxShadow: [
-                BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10)
-              ]),
-          child:
-              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-              const Text('Tingkat Kelulusan',
-                  style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w700,
-                      color: _C.dark)),
-              Text('${(lulus / sorted.length * 100).round()}%',
-                  style: const TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w700,
-                      color: _C.orange)),
-            ]),
-            const SizedBox(height: 8),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(99),
-              child: LinearProgressIndicator(
-                value: lulus / sorted.length,
-                backgroundColor: _C.orange.withOpacity(0.12),
-                valueColor: const AlwaysStoppedAnimation(_C.orange),
-                minHeight: 10,
+        ],
+      ),
+    );
+  }
+}
+
+class _ScoreBoard extends StatelessWidget {
+  const _ScoreBoard({
+    required this.participants,
+    required this.questionCount,
+  });
+
+  final List<Participant> participants;
+  final int questionCount;
+
+  @override
+  Widget build(BuildContext context) {
+    return AppPanel(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const SectionTitle(icon: Icons.leaderboard_outlined, title: 'Nilai Peserta'),
+          const SizedBox(height: 12),
+          if (participants.isEmpty)
+            const Text('Belum ada peserta yang bergabung.')
+          else
+            for (var index = 0; index < participants.length; index++)
+              _ScoreRow(
+                rank: index + 1,
+                participant: participants[index],
+                questionCount: questionCount,
               ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ScoreRow extends StatelessWidget {
+  const _ScoreRow({
+    required this.rank,
+    required this.participant,
+    required this.questionCount,
+  });
+
+  final int rank;
+  final Participant participant;
+  final int questionCount;
+
+  @override
+  Widget build(BuildContext context) {
+    final progress = questionCount == 0 ? 0.0 : participant.answers.length / questionCount;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: rank == 1 ? const Color(0xFFFFFBEB) : const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: rank == 1 ? const Color(0xFFFDE68A) : const Color(0xFFE2E8F0)),
+      ),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              SizedBox(width: 42, child: Text('#$rank', style: const TextStyle(fontWeight: FontWeight.w900))),
+              Expanded(child: Text(participant.name, style: const TextStyle(fontWeight: FontWeight.w900))),
+              StatusBadge(label: '${participant.score} poin', icon: Icons.star_outline, color: const Color(0xFFF59E0B)),
+            ],
+          ),
+          const SizedBox(height: 10),
+          LinearProgressIndicator(value: progress.clamp(0.0, 1.0).toDouble()),
+        ],
+      ),
+    );
+  }
+}
+
+class _QuestionManager extends StatelessWidget {
+  const _QuestionManager({
+    required this.questions,
+    required this.onAdd,
+    required this.onEdit,
+    required this.onDelete,
+  });
+
+  final List<QuizQuestion> questions;
+  final VoidCallback onAdd;
+  final ValueChanged<int> onEdit;
+  final ValueChanged<int> onDelete;
+
+  @override
+  Widget build(BuildContext context) {
+    return AppPanel(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Expanded(child: SectionTitle(icon: Icons.quiz_outlined, title: 'Manajemen Soal')),
+              IconButton.filledTonal(
+                onPressed: onAdd,
+                icon: const Icon(Icons.add),
+                tooltip: 'Tambah soal',
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          for (var index = 0; index < questions.length; index++)
+            _QuestionAdminCard(
+              number: index + 1,
+              question: questions[index],
+              onEdit: () => onEdit(index),
+              onDelete: () => onDelete(index),
             ),
-          ]),
-        ),
-        const SizedBox(height: 14),
-        // Soal paling banyak salah
-        Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(14),
-              boxShadow: [
-                BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10)
-              ]),
-          child:
-              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            const Text('Distribusi Skor',
-                style: TextStyle(
-                    fontSize: 13, fontWeight: FontWeight.w700, color: _C.dark)),
-            const SizedBox(height: 14),
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: sorted.asMap().entries.map((e) {
-                final pct = maxScore > 0 ? e.value.score / maxScore : 0.0;
-                return _ScoreBar(
-                    name: e.value.name.split(' ').first,
-                    score: e.value.score,
-                    height: 80 * pct);
-              }).toList(),
+        ],
+      ),
+    );
+  }
+}
+
+class _QuestionAdminCard extends StatelessWidget {
+  const _QuestionAdminCard({
+    required this.number,
+    required this.question,
+    required this.onEdit,
+    required this.onDelete,
+  });
+
+  final int number;
+  final QuizQuestion question;
+  final VoidCallback onEdit;
+  final VoidCallback onDelete;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Text(
+                  '$number. ${question.question}',
+                  style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16),
+                ),
+              ),
+              IconButton(onPressed: onEdit, icon: const Icon(Icons.edit_outlined), tooltip: 'Ubah soal'),
+              IconButton(onPressed: onDelete, icon: const Icon(Icons.delete_outline), tooltip: 'Hapus soal'),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              for (var index = 0; index < question.options.length; index++)
+                StatusBadge(
+                  label: question.options[index],
+                  icon: index == question.correctIndex ? Icons.check_circle_outline : Icons.circle_outlined,
+                  color: index == question.correctIndex ? const Color(0xFF16A34A) : const Color(0xFF64748B),
+                ),
+            ],
+          ),
+          if (question.explanation.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Text(question.explanation, style: const TextStyle(color: Color(0xFF64748B))),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _QuestionEditorDialog extends StatefulWidget {
+  const _QuestionEditorDialog({this.initialQuestion});
+
+  final QuizQuestion? initialQuestion;
+
+  @override
+  State<_QuestionEditorDialog> createState() => _QuestionEditorDialogState();
+}
+
+class _QuestionEditorDialogState extends State<_QuestionEditorDialog> {
+  final _formKey = GlobalKey<FormState>();
+  late final TextEditingController _questionController;
+  late final List<TextEditingController> _optionControllers;
+  late final TextEditingController _explanationController;
+  late final TextEditingController _categoryController;
+  late final TextEditingController _pointsController;
+  late int _correctIndex;
+  late int _colorValue;
+
+  @override
+  void initState() {
+    super.initState();
+    final question = widget.initialQuestion;
+    _questionController = TextEditingController(text: question?.question ?? '');
+    _optionControllers = List.generate(
+      4,
+      (index) => TextEditingController(text: question?.options[index] ?? ''),
+    );
+    _explanationController = TextEditingController(text: question?.explanation ?? '');
+    _categoryController = TextEditingController(text: question?.category ?? 'Umum');
+    _pointsController = TextEditingController(text: '${question?.points ?? 100}');
+    _correctIndex = question?.correctIndex ?? 0;
+    _colorValue = question?.color.toARGB32() ?? 0xFF1D4ED8;
+  }
+
+  @override
+  void dispose() {
+    _questionController.dispose();
+    for (final controller in _optionControllers) {
+      controller.dispose();
+    }
+    _explanationController.dispose();
+    _categoryController.dispose();
+    _pointsController.dispose();
+    super.dispose();
+  }
+
+  void _save() {
+    if (!_formKey.currentState!.validate()) return;
+
+    Navigator.pop(
+      context,
+      QuizQuestion(
+        question: _questionController.text.trim(),
+        options: _optionControllers.map((controller) => controller.text.trim()).toList(),
+        correctIndex: _correctIndex,
+        explanation: _explanationController.text.trim(),
+        category: _categoryController.text.trim(),
+        points: int.tryParse(_pointsController.text.trim()) ?? 100,
+        color: Color(_colorValue),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Text(widget.initialQuestion == null ? 'Tambah Soal' : 'Ubah Soal'),
+      content: SizedBox(
+        width: 560,
+        child: Form(
+          key: _formKey,
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextFormField(
+                  controller: _questionController,
+                  minLines: 2,
+                  maxLines: 4,
+                  decoration: const InputDecoration(labelText: 'Pertanyaan'),
+                  validator: _required,
+                ),
+                const SizedBox(height: 12),
+                for (var index = 0; index < _optionControllers.length; index++) ...[
+                  TextFormField(
+                    controller: _optionControllers[index],
+                    decoration: InputDecoration(labelText: 'Pilihan ${String.fromCharCode(65 + index)}'),
+                    validator: _required,
+                  ),
+                  const SizedBox(height: 10),
+                ],
+                DropdownButtonFormField<int>(
+                  initialValue: _correctIndex,
+                  decoration: const InputDecoration(labelText: 'Jawaban benar'),
+                  items: const [
+                    DropdownMenuItem(value: 0, child: Text('Pilihan A')),
+                    DropdownMenuItem(value: 1, child: Text('Pilihan B')),
+                    DropdownMenuItem(value: 2, child: Text('Pilihan C')),
+                    DropdownMenuItem(value: 3, child: Text('Pilihan D')),
+                  ],
+                  onChanged: (value) => setState(() => _correctIndex = value ?? 0),
+                ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: _categoryController,
+                  decoration: const InputDecoration(labelText: 'Kategori'),
+                  validator: _required,
+                ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: _pointsController,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(labelText: 'Poin'),
+                  validator: (value) {
+                    if (value == null || value.trim().isEmpty) return 'Wajib diisi';
+                    final points = int.tryParse(value.trim());
+                    if (points == null || points <= 0) return 'Poin harus angka lebih dari 0';
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 12),
+                DropdownButtonFormField<int>(
+                  initialValue: _colorValue,
+                  decoration: const InputDecoration(labelText: 'Warna soal'),
+                  items: const [
+                    DropdownMenuItem(value: 0xFF1D4ED8, child: Text('Biru')),
+                    DropdownMenuItem(value: 0xFF14B8A6, child: Text('Toska')),
+                    DropdownMenuItem(value: 0xFFF59E0B, child: Text('Kuning')),
+                    DropdownMenuItem(value: 0xFF7C3AED, child: Text('Ungu')),
+                    DropdownMenuItem(value: 0xFF16A34A, child: Text('Hijau')),
+                  ],
+                  onChanged: (value) => setState(() => _colorValue = value ?? 0xFF1D4ED8),
+                ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: _explanationController,
+                  minLines: 2,
+                  maxLines: 4,
+                  decoration: const InputDecoration(labelText: 'Pembahasan'),
+                  validator: _required,
+                ),
+              ],
             ),
-          ]),
+          ),
         ),
-        const SizedBox(height: 16),
-        const Text('Peringkat Lengkap',
-            style: TextStyle(
-                fontSize: 15, fontWeight: FontWeight.w800, color: _C.dark)),
-        const SizedBox(height: 10),
-        ...sorted.asMap().entries.map((e) => Padding(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: _RekapRow(
-                  participant: e.value,
-                  rank: e.key + 1,
-                  total: room.questions.length),
-            )),
+      ),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(context), child: const Text('Batal')),
+        FilledButton.icon(onPressed: _save, icon: const Icon(Icons.save_outlined), label: const Text('Simpan')),
       ],
     );
   }
-}
 
-// ── Widget kecil ──
-class _ProgressRow extends StatelessWidget {
-  const _ProgressRow({required this.participant, required this.room});
-  final Participant participant;
-  final QuizRoom room;
-
-  @override
-  Widget build(BuildContext context) {
-    final progress = room.questions.isEmpty
-        ? 0.0
-        : participant.answers.length / room.questions.length;
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-          Text(participant.name,
-              style: const TextStyle(
-                  fontWeight: FontWeight.w700, color: _C.dark, fontSize: 13.5)),
-          Text('${participant.score} poin',
-              style: const TextStyle(
-                  fontSize: 12.5,
-                  color: _C.orange,
-                  fontWeight: FontWeight.w700)),
-        ]),
-        const SizedBox(height: 6),
-        Row(children: [
-          Expanded(
-              child: ClipRRect(
-            borderRadius: BorderRadius.circular(99),
-            child: LinearProgressIndicator(
-              value: progress,
-              backgroundColor: _C.orange.withOpacity(0.12),
-              valueColor: const AlwaysStoppedAnimation(_C.orange),
-              minHeight: 7,
-            ),
-          )),
-          const SizedBox(width: 10),
-          Text('${participant.answers.length}/${room.questions.length}',
-              style: const TextStyle(
-                  fontSize: 11, color: _C.muted, fontWeight: FontWeight.w600)),
-        ]),
-      ]),
-    );
-  }
-}
-
-class _HeaderMetric extends StatelessWidget {
-  const _HeaderMetric(
-      {required this.label, required this.value, required this.icon});
-  final String label, value;
-  final IconData icon;
-  @override
-  Widget build(BuildContext context) {
-    return Expanded(
-        child: Column(children: [
-      Icon(icon, color: Colors.white.withOpacity(0.8), size: 18),
-      const SizedBox(height: 4),
-      Text(value,
-          style: const TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w900,
-              color: Colors.white,
-              letterSpacing: -0.5)),
-      Text(label,
-          style: TextStyle(fontSize: 11, color: Colors.white.withOpacity(0.7))),
-    ]));
-  }
-}
-
-class _VDivider extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) => Container(
-      width: 1,
-      height: 40,
-      color: Colors.white.withOpacity(0.25),
-      margin: const EdgeInsets.symmetric(horizontal: 6));
-}
-
-class _SummaryItem extends StatelessWidget {
-  const _SummaryItem(
-      {required this.label, required this.value, required this.icon});
-  final String label, value;
-  final IconData icon;
-  @override
-  Widget build(BuildContext context) {
-    return Column(children: [
-      Icon(icon, color: Colors.white.withOpacity(0.85), size: 18),
-      const SizedBox(height: 5),
-      Text(value,
-          style: const TextStyle(
-              fontSize: 19,
-              fontWeight: FontWeight.w900,
-              color: Colors.white,
-              letterSpacing: -0.5)),
-      const SizedBox(height: 2),
-      Text(label,
-          style: TextStyle(fontSize: 11, color: Colors.white.withOpacity(0.75)),
-          textAlign: TextAlign.center),
-    ]);
-  }
-}
-
-class _VLine extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) => Container(
-      width: 1,
-      height: 44,
-      color: Colors.white.withOpacity(0.25),
-      margin: const EdgeInsets.symmetric(horizontal: 4));
-}
-
-class _ScoreBar extends StatelessWidget {
-  const _ScoreBar(
-      {required this.name, required this.score, required this.height});
-  final String name;
-  final int score;
-  final double height;
-  @override
-  Widget build(BuildContext context) {
-    return Column(mainAxisAlignment: MainAxisAlignment.end, children: [
-      Text('$score',
-          style: const TextStyle(
-              fontSize: 11, fontWeight: FontWeight.w700, color: _C.orange)),
-      const SizedBox(height: 4),
-      Container(
-          width: 32,
-          height: height.clamp(8.0, 80.0),
-          decoration: BoxDecoration(
-              color: _C.orange, borderRadius: BorderRadius.circular(6))),
-      const SizedBox(height: 6),
-      Text(name,
-          style: const TextStyle(fontSize: 10, color: _C.muted),
-          overflow: TextOverflow.ellipsis),
-    ]);
-  }
-}
-
-class _RekapRow extends StatelessWidget {
-  const _RekapRow(
-      {required this.participant, required this.rank, required this.total});
-  final Participant participant;
-  final int rank, total;
-
-  Color get _rankColor {
-    if (rank == 1) return const Color(0xFFF59E0B);
-    if (rank == 2) return const Color(0xFF94A3B8);
-    if (rank == 3) return const Color(0xFFCD7F32);
-    return _C.muted;
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final scoreColor = participant.score >= 70
-        ? const Color(0xFF059669)
-        : const Color(0xFFDC2626);
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: rank <= 3
-            ? Border.all(color: _rankColor.withOpacity(0.3), width: 1.5)
-            : null,
-        boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 8)
-        ],
-      ),
-      child: Row(children: [
-        Container(
-            width: 30,
-            height: 30,
-            decoration: BoxDecoration(
-                color: _rankColor.withOpacity(0.1), shape: BoxShape.circle),
-            child: Center(
-                child: rank <= 3
-                    ? Icon(Icons.emoji_events_rounded,
-                        size: 15, color: _rankColor)
-                    : Text('#$rank',
-                        style: TextStyle(
-                            fontSize: 10,
-                            fontWeight: FontWeight.w800,
-                            color: _rankColor)))),
-        const SizedBox(width: 10),
-        Expanded(
-            child: Text(participant.name,
-                style: const TextStyle(
-                    fontSize: 13.5,
-                    fontWeight: FontWeight.w700,
-                    color: _C.dark))),
-        Text('${participant.score}',
-            style: TextStyle(
-                fontSize: 18, fontWeight: FontWeight.w900, color: scoreColor)),
-        const SizedBox(width: 6),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-          decoration: BoxDecoration(
-              color: scoreColor.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(20)),
-          child: Text(participant.score >= 70 ? 'Lulus' : 'Belum',
-              style: TextStyle(
-                  fontSize: 10.5,
-                  fontWeight: FontWeight.w700,
-                  color: scoreColor)),
-        ),
-      ]),
-    );
+  String? _required(String? value) {
+    if (value == null || value.trim().isEmpty) {
+      return 'Wajib diisi';
+    }
+    return null;
   }
 }
