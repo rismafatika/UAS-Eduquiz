@@ -4,18 +4,12 @@ import '../models/app_user.dart';
 import '../models/participant.dart';
 import '../models/quiz_question.dart';
 import '../models/quiz_room.dart';
-import '../models/quiz_result.dart';
 import '../services/room_service.dart';
 import '../widgets/app_panel.dart';
 import '../widgets/pro_page.dart';
 import '../widgets/room_header.dart';
 import '../widgets/section_title.dart';
-<<<<<<< HEAD
 import '../widgets/status_badge.dart';
-=======
-import 'leaderboard_page.dart';
-import 'manage_questions_page.dart';
->>>>>>> origin/rista-ui
 import 'quiz_live_page.dart';
 import 'review_page.dart';
 
@@ -30,27 +24,17 @@ class HostDashboardPage extends StatefulWidget {
 }
 
 class _HostDashboardPageState extends State<HostDashboardPage> {
-  int _demoParticipantCounter = 1;
-
   void _restartQuiz() {
     setState(() => RoomService.instance.startQuiz(widget.room));
     Navigator.pushReplacement(
-<<<<<<< HEAD
       context,
       MaterialPageRoute(builder: (_) => QuizLivePage(user: widget.user, room: widget.room)),
     );
-=======
-        context,
-        MaterialPageRoute(
-            builder: (_) =>
-                QuizLivePage(user: widget.user, room: widget.room)))
->>>>>>> origin/rista-ui
   }
 
   void _openReview() {
     RoomService.instance.showReview(widget.room);
     Navigator.push(
-<<<<<<< HEAD
       context,
       MaterialPageRoute(builder: (_) => ReviewPage(user: widget.user, room: widget.room)),
     );
@@ -63,7 +47,7 @@ class _HostDashboardPageState extends State<HostDashboardPage> {
     );
 
     if (!mounted || question == null) return;
-    setState(() => RoomService.instance.addQuestion(widget.room, question));
+    setState(() => RoomService.instance.addQuestion(room: widget.room, question: question));
   }
 
   Future<void> _editQuestion(int index) async {
@@ -73,7 +57,7 @@ class _HostDashboardPageState extends State<HostDashboardPage> {
     );
 
     if (!mounted || question == null) return;
-    setState(() => RoomService.instance.updateQuestion(widget.room, index, question));
+    setState(() => RoomService.instance.updateQuestion(room: widget.room, index: index, question: question));
   }
 
   Future<void> _deleteQuestion(int index) async {
@@ -97,45 +81,11 @@ class _HostDashboardPageState extends State<HostDashboardPage> {
     );
 
     if (!mounted || confirmed != true) return;
-    setState(() => RoomService.instance.removeQuestion(widget.room, index));
-=======
-        context,
-        MaterialPageRoute(
-            builder: (_) => ReviewPage(user: widget.user, room: widget.room)))
-  }
-
-  void _openLeaderboard() {
-    RoomService.instance.showLeaderboard(widget.room);
-    Navigator.push(
-        context,
-        MaterialPageRoute(
-            builder: (_) =>
-                LeaderboardPage(user: widget.user, room: widget.room)));
-  }
-
-  void _openManageQuestions() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => ManageQuestionsPage(user: widget.user, room: widget.room),
-      ),
-    ).then((_) => setState(() {}));
-  }
-
-  void _addDemoParticipant() {
-    setState(() {
-      RoomService.instance.addParticipant(
-        room: widget.room,
-        name: 'Peserta Demo $_demoParticipantCounter',
-      );
-      _demoParticipantCounter++;
-    });
->>>>>>> origin/rista-ui
+    setState(() => RoomService.instance.deleteQuestion(room: widget.room, index: index));
   }
 
   @override
   Widget build(BuildContext context) {
-<<<<<<< HEAD
     final totalAnswers = widget.room.participants.fold<int>(
       0,
       (sum, participant) => sum + participant.answers.length,
@@ -146,30 +96,6 @@ class _HostDashboardPageState extends State<HostDashboardPage> {
         : widget.room.participants.map((participant) => participant.score).reduce((a, b) => a + b) /
             widget.room.participants.length;
     final rankedParticipants = [...widget.room.participants]..sort((a, b) => b.score.compareTo(a.score));
-=======
-    final totalAnswers = widget.room.participants
-        .fold<int>(0, (sum, participant) => sum + participant.answers.length);
-    final maxAnswers =
-        widget.room.participants.length * widget.room.questions.length;
-    final averageScore = widget.room.participants.isEmpty
-        ? 0
-        : widget.room.participants
-                .map((participant) => participant.score)
-                .reduce((a, b) => a + b) /
-            widget.room.participants.length;
-    final topStreak = widget.room.participants.isEmpty
-        ? 0
-        : widget.room.participants
-            .map((participant) => participant.streak)
-            .reduce((a, b) => a > b ? a : b);
-    final participantResults = widget.room.participants
-        .where((participant) => participant.answers.isNotEmpty)
-        .map((participant) => RoomService.instance.resultForParticipant(
-              room: widget.room,
-              participant: participant,
-            ))
-        .toList();
->>>>>>> origin/rista-ui
 
     return Scaffold(
       appBar: AppBar(title: const Text('Dashboard Admin')),
@@ -192,7 +118,6 @@ class _HostDashboardPageState extends State<HostDashboardPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-<<<<<<< HEAD
                   const SectionTitle(icon: Icons.tune, title: 'Kontrol Sesi'),
                   const SizedBox(height: 14),
                   Wrap(
@@ -215,114 +140,6 @@ class _HostDashboardPageState extends State<HostDashboardPage> {
                         label: const Text('Tambah Soal'),
                       ),
                     ],
-=======
-                  RoomHeader(room: widget.room),
-                  const SizedBox(height: 16),
-                  LayoutBuilder(
-                    builder: (context, constraints) {
-                      final compact = constraints.maxWidth < 720;
-                      final cards = [
-                        _MetricCard(
-                            label: 'Peserta',
-                            value: '${widget.room.participants.length}',
-                            icon: Icons.groups_2_outlined),
-                        _MetricCard(
-                            label: 'Jawaban',
-                            value: '$totalAnswers/$maxAnswers',
-                            icon: Icons.checklist_rtl),
-                        _MetricCard(
-                            label: 'Rata-rata',
-                            value: averageScore.toStringAsFixed(0),
-                            icon: Icons.bar_chart),
-                        _MetricCard(
-                            label: 'Top streak',
-                            value: '$topStreak',
-                            icon: Icons.local_fire_department_outlined),
-                      ];
-
-                      if (compact) {
-                        return Column(
-                          children: cards
-                              .map((card) => Padding(
-                                  padding: const EdgeInsets.only(bottom: 10),
-                                  child: card))
-                              .toList(),
-                        );
-                      }
-
-                      return Row(
-                        children: cards
-                            .map((card) => Expanded(
-                                child: Padding(
-                                    padding: const EdgeInsets.only(right: 10),
-                                    child: card)))
-                            .toList(),
-                      );
-                    },
-                  ),
-                  const SizedBox(height: 16),
-                  AppPanel(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const SectionTitle(
-                            icon: Icons.dashboard_outlined,
-                            title: 'Kontrol dan Progres'),
-                        const SizedBox(height: 14),
-                        Wrap(
-                          spacing: 10,
-                          runSpacing: 10,
-                          children: [
-                            FilledButton.icon(
-                                onPressed: _restartQuiz,
-                                icon: const Icon(Icons.refresh),
-                                label: const Text('Mulai Ulang Quiz')),
-                            OutlinedButton.icon(
-                                onPressed: _openLeaderboard,
-                                icon: const Icon(Icons.leaderboard_outlined),
-                                label: const Text('Leaderboard')),
-                            OutlinedButton.icon(
-                                onPressed: _openReview,
-                                icon: const Icon(Icons.rate_review_outlined),
-                                label: const Text('Review Jawaban')),
-                            OutlinedButton.icon(
-                                onPressed: _openManageQuestions,
-                                icon: const Icon(Icons.edit_note_outlined),
-                                label: const Text('Kelola Soal')),
-                            OutlinedButton.icon(
-                                onPressed: _addDemoParticipant,
-                                icon:
-                                    const Icon(Icons.person_add_alt_1_outlined),
-                                label: const Text('Tambah Peserta Demo')),
-                          ],
-                        ),
-                        const SizedBox(height: 18),
-                        for (final participant in widget.room.participants)
-                          _ParticipantProgress(
-                              room: widget.room, participant: participant),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  AppPanel(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const SectionTitle(
-                            icon: Icons.assignment_turned_in_outlined,
-                            title: 'Hasil Peserta'),
-                        const SizedBox(height: 12),
-                        if (participantResults.isEmpty)
-                          const Text(
-                            'Belum ada peserta yang menjawab quiz.',
-                            style: TextStyle(color: Color(0xFF64748B)),
-                          )
-                        else
-                          for (final result in participantResults)
-                            _ParticipantResultRow(result: result),
-                      ],
-                    ),
->>>>>>> origin/rista-ui
                   ),
                 ],
               ),
@@ -343,7 +160,6 @@ class _HostDashboardPageState extends State<HostDashboardPage> {
   }
 }
 
-<<<<<<< HEAD
 class _MetricGrid extends StatelessWidget {
   const _MetricGrid({
     required this.participantCount,
@@ -379,67 +195,17 @@ class _MetricGrid extends StatelessWidget {
           children: cards.map((card) => Expanded(child: Padding(padding: const EdgeInsets.only(right: 10), child: card))).toList(),
         );
       },
-=======
-class _ParticipantResultRow extends StatelessWidget {
-  const _ParticipantResultRow({required this.result});
-
-  final QuizResult result;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: const Color(0xFFE5E7EB)),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 42,
-            height: 42,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: const Color(0xFFEEF2FF),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Text(result.grade, style: const TextStyle(fontWeight: FontWeight.w900)),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(result.participantName, style: const TextStyle(fontWeight: FontWeight.w800)),
-                Text(
-                  '${result.correctAnswers} benar - ${result.wrongAnswers} salah - ${result.percentage.toStringAsFixed(1)}%',
-                  style: const TextStyle(color: Color(0xFF64748B), fontSize: 12),
-                ),
-              ],
-            ),
-          ),
-          Text('${result.totalScore} poin', style: const TextStyle(fontWeight: FontWeight.w800)),
-        ],
-      ),
->>>>>>> origin/rista-ui
     );
   }
 }
 
 class _MetricCard extends StatelessWidget {
-<<<<<<< HEAD
   const _MetricCard({
     required this.label,
     required this.value,
     required this.icon,
     required this.color,
   });
-=======
-  const _MetricCard(
-      {required this.label, required this.value, required this.icon});
->>>>>>> origin/rista-ui
 
   final String label;
   final String value;
@@ -464,15 +230,8 @@ class _MetricCard extends StatelessWidget {
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-<<<<<<< HEAD
               Text(value, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900)),
               Text(label, style: const TextStyle(color: Color(0xFF64748B))),
-=======
-              Text(value,
-                  style: const TextStyle(
-                      fontSize: 22, fontWeight: FontWeight.w900)),
-              Text(label),
->>>>>>> origin/rista-ui
             ],
           ),
         ],
@@ -484,7 +243,7 @@ class _MetricCard extends StatelessWidget {
 class _ScoreBoard extends StatelessWidget {
   const _ScoreBoard({
     required this.participants,
-    required questionCount,
+    required this.questionCount,
   });
 
   final List<Participant> participants;
@@ -517,7 +276,7 @@ class _ScoreRow extends StatelessWidget {
   const _ScoreRow({
     required this.rank,
     required this.participant,
-    required questionCount,
+    required this.questionCount,
   });
 
   final int rank;
@@ -574,7 +333,6 @@ class _QuestionManager extends StatelessWidget {
         children: [
           Row(
             children: [
-<<<<<<< HEAD
               const Expanded(child: SectionTitle(icon: Icons.quiz_outlined, title: 'Manajemen Soal')),
               IconButton.filledTonal(
                 onPressed: onAdd,
@@ -591,21 +349,6 @@ class _QuestionManager extends StatelessWidget {
               onEdit: () => onEdit(index),
               onDelete: () => onDelete(index),
             ),
-=======
-              Text(participant.name,
-                  style: const TextStyle(fontWeight: FontWeight.w800)),
-              Text('${participant.score} poin | Lv ${participant.level}'),
-            ],
-          ),
-          const SizedBox(height: 6),
-          LinearProgressIndicator(
-              value: participant.answers.length / room.questions.length),
-          const SizedBox(height: 4),
-          Text(
-            '${participant.answers.length}/${room.questions.length} jawaban - ${participant.streak} streak - ${participant.rankTitle}',
-            style: const TextStyle(color: Color(0xFF64748B), fontSize: 12),
-          ),
->>>>>>> origin/rista-ui
         ],
       ),
     );
