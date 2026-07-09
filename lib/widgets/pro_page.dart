@@ -6,7 +6,7 @@ class ProPage extends StatelessWidget {
     required this.title,
     required this.subtitle,
     required this.child,
-    this.maxWidth = 980,
+    this.maxWidth = 1000,
   });
 
   final String title;
@@ -16,35 +16,80 @@ class ProPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SafeArea(
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(20, 12, 20, 28),
-        child: Center(
-          child: ConstrainedBox(
-            constraints: BoxConstraints(maxWidth: maxWidth),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: const TextStyle(
-                    fontSize: 30,
-                    fontWeight: FontWeight.w900,
-                    color: Color(0xFF0F172A),
+    return Container(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            Color(0xffEEF2FF),
+            Color(0xffF8F7FF),
+            Color(0xffFFFFFF),
+          ],
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+        ),
+      ),
+      child: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(24),
+          child: Center(
+            child: ConstrainedBox(
+              constraints: BoxConstraints(maxWidth: maxWidth),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(30),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(28),
+                      gradient: const LinearGradient(
+                        colors: [
+                          Color(0xff6D5FFD),
+                          Color(0xff8B5CF6),
+                        ],
+                      ),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+
+                        const Icon(
+                          Icons.school_rounded,
+                          color: Colors.white,
+                          size: 42,
+                        ),
+
+                        const SizedBox(height: 18),
+
+                        Text(
+                          title,
+                          style: const TextStyle(
+                            fontSize: 30,
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+
+                        const SizedBox(height: 10),
+
+                        Text(
+                          subtitle,
+                          style: const TextStyle(
+                            color: Colors.white70,
+                            fontSize: 16,
+                            height: 1.5,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  subtitle,
-                  style: const TextStyle(
-                    fontSize: 15,
-                    height: 1.45,
-                    color: Color(0xFF64748B),
-                  ),
-                ),
-                const SizedBox(height: 20),
-                child,
-              ],
+
+                  const SizedBox(height: 25),
+
+                  child,
+                ],
+              ),
             ),
           ),
         ),

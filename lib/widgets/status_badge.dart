@@ -5,7 +5,7 @@ class StatusBadge extends StatelessWidget {
     super.key,
     required this.label,
     required this.icon,
-    this.color = const Color(0xFF1D4ED8),
+    this.color = Colors.deepPurple,
   });
 
   final String label;
@@ -14,16 +14,17 @@ class StatusBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 250),
       padding: const EdgeInsets.symmetric(
-        horizontal: 10,
-        vertical: 7,
+        horizontal: 14,
+        vertical: 10,
       ),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(8),
+        color: color.withOpacity(.10),
+        borderRadius: BorderRadius.circular(30),
         border: Border.all(
-          color: color.withValues(alpha: 0.35),
+          color: color.withOpacity(.25),
         ),
       ),
       child: Row(
@@ -31,15 +32,16 @@ class StatusBadge extends StatelessWidget {
         children: [
           Icon(
             icon,
-            size: 16,
+            size: 18,
             color: color,
           ),
-          const SizedBox(width: 6),
+          const SizedBox(width: 8),
           Text(
             label,
             style: TextStyle(
               color: color,
-              fontWeight: FontWeight.w900,
+              fontWeight: FontWeight.bold,
+              fontSize: 14,
             ),
           ),
         ],

@@ -1,23 +1,30 @@
 import 'package:flutter/material.dart';
 
 class AppPanel extends StatelessWidget {
-  const AppPanel({super.key, required this.child});
+  const AppPanel({
+    super.key,
+    required this.child,
+  });
 
   final Widget child;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 300),
       width: double.infinity,
-      padding: const EdgeInsets.all(18),
+      padding: const EdgeInsets.all(22),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(
+          color: const Color(0xffECECF3),
+        ),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF0F172A).withOpacity(0.06),
-            blurRadius: 24,
+            color: Colors.deepPurple.withOpacity(.08),
+            blurRadius: 30,
+            spreadRadius: 2,
             offset: const Offset(0, 12),
           ),
         ],
