@@ -1,4 +1,4 @@
-# EduQuiz
+# EduQuiz test
 
 EduQuiz adalah aplikasi Flutter untuk sesi kuis kelas dengan alur:
 

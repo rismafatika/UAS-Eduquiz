@@ -1,68 +1,131 @@
 import 'package:flutter/material.dart';
+
 import '../models/quiz_question.dart';
 
 const sampleQuestions = [
   QuizQuestion(
-    question: 'Apa fungsi utama room code pada EduQuiz?',
+    question:
+        'Saat guru membagikan kode kelas di EduQuiz, apa yang harus dilakukan peserta?',
     options: [
-      'Menghubungkan peserta ke room kuis yang benar',
-      'Menghapus akun peserta',
-      'Mengubah warna aplikasi',
-      'Menutup dashboard host',
+      'Memasukkan kode room lalu masuk ke lobby',
+      'Membuat room baru sebagai host',
+      'Menutup aplikasi dan login ulang',
+      'Mengubah nama host di dashboard',
     ],
     correctIndex: 0,
     explanation:
-        'Room code dipakai peserta untuk masuk ke sesi kuis yang dibuat host.',
+        'Room code dipakai untuk menghubungkan peserta ke sesi kuis yang benar.',
     category: 'EduQuiz',
     points: 100,
-    color: Color(0xFF6366F1),
+    color: Color(0xFF7C3AED),
   ),
-
   QuizQuestion(
-    question: 'Halaman apa yang dipakai peserta sebelum kuis dimulai?',
+    question: 'Di sebuah kuis kelas, leaderboard sebaiknya menampilkan apa?',
     options: [
-      'Lobby room',
-      'Review jawaban',
-      'Login admin',
-      'Riwayat nilai',
+      'Urutan peserta berdasarkan skor tertinggi',
+      'Daftar perangkat yang dipakai peserta',
+      'Password akun peserta',
+      'Riwayat browser host',
     ],
     correctIndex: 0,
     explanation:
-        'Lobby room menampilkan peserta yang sudah bergabung dan menunggu host mulai.',
-    category: 'Room',
-    points: 100,
-    color: Color(0xFF8B5CF6),
+        'Leaderboard membantu peserta melihat posisi dan membuat suasana kuis lebih kompetitif.',
+    category: 'Kompetisi',
+    points: 120,
+    color: Color(0xFF0EA5E9),
   ),
-
   QuizQuestion(
-    question: 'Leaderboard otomatis menampilkan data apa?',
+    question:
+        'Jika kamu menjawab benar beberapa soal berturut-turut, fitur apa yang paling cocok diberikan?',
     options: [
-      'Peringkat peserta berdasarkan skor',
-      'Daftar email host',
-      'Kode sumber aplikasi',
-      'Tema pilihan peserta',
+      'Streak bonus',
+      'Hukuman skor',
+      'Keluar otomatis',
+      'Menghapus room',
     ],
     correctIndex: 0,
     explanation:
-        'Leaderboard mengurutkan peserta berdasarkan skor tertinggi.',
-    category: 'Leaderboard',
-    points: 150,
-    color: Color(0xFF06B6D4),
+        'Streak bonus membuat peserta semakin termotivasi untuk mempertahankan jawaban benar.',
+    category: 'Skor',
+    points: 130,
+    color: Color(0xFFF97316),
   ),
-
   QuizQuestion(
-    question: 'Mengapa review jawaban dibutuhkan setelah kuis?',
+    question: 'Apa manfaat review jawaban setelah kuis selesai?',
     options: [
-      'Agar peserta paham jawaban benar dan pembahasannya',
-      'Agar room langsung terhapus',
-      'Agar host tidak melihat hasil',
-      'Agar peserta login ulang',
+      'Peserta memahami jawaban benar dan pembahasannya',
+      'Host tidak perlu melihat hasil',
+      'Peserta tidak bisa belajar dari kesalahan',
+      'Room langsung hilang dari aplikasi',
     ],
     correctIndex: 0,
     explanation:
-        'Review jawaban membantu proses belajar setelah kuis selesai.',
-    category: 'Review',
+        'Review jawaban mengubah kuis dari sekadar permainan menjadi proses belajar.',
+    category: 'Belajar',
     points: 150,
     color: Color(0xFF10B981),
+  ),
+  QuizQuestion(
+    question:
+        'Dalam dashboard host, metrik apa yang paling membantu guru memantau kelas?',
+    options: [
+      'Jumlah jawaban, rata-rata skor, dan progres peserta',
+      'Warna wallpaper peserta',
+      'Ukuran layar setiap peserta',
+      'Jumlah tombol di aplikasi',
+    ],
+    correctIndex: 0,
+    explanation:
+        'Guru butuh metrik yang langsung menggambarkan progres dan pemahaman peserta.',
+    category: 'Dashboard',
+    points: 140,
+    color: Color(0xFF2563EB),
+  ),
+  QuizQuestion(
+    question: 'Apa tanda kuis kelas terasa profesional untuk peserta?',
+    options: [
+      'Instruksi jelas, tombol berfungsi, skor terlihat, dan feedback cepat',
+      'Banyak tombol yang tidak punya aksi',
+      'Tidak ada pembahasan jawaban',
+      'Peserta tidak tahu hasil akhirnya',
+    ],
+    correctIndex: 0,
+    explanation:
+        'Aplikasi kuis yang baik membuat peserta tahu apa yang harus dilakukan dan hasilnya.',
+    category: 'UX',
+    points: 160,
+    color: Color(0xFFDB2777),
+  ),
+  QuizQuestion(
+    question:
+        'Jika peserta masuk setelah kuis sudah berjalan, halaman terbaik yang dibuka adalah...',
+    options: [
+      'Halaman quiz live sesuai fase room',
+      'Halaman logout',
+      'Halaman kosong',
+      'Halaman schema database',
+    ],
+    correctIndex: 0,
+    explanation:
+        'Routing berdasarkan fase room membuat peserta tidak tersesat saat bergabung terlambat.',
+    category: 'Realtime',
+    points: 150,
+    color: Color(0xFF0891B2),
+  ),
+  QuizQuestion(
+    question:
+        'Apa yang sebaiknya terjadi setelah peserta menyelesaikan semua soal?',
+    options: [
+      'Menampilkan skor, leaderboard, dan akses review jawaban',
+      'Menghapus skor peserta',
+      'Kembali ke login tanpa hasil',
+      'Membiarkan layar tetap di soal terakhir',
+    ],
+    correctIndex: 0,
+    explanation:
+        'Peserta perlu melihat nilai yang didapat dan pembahasan agar pengalaman belajarnya selesai.',
+    category: 'Hasil',
+    points: 180,
+    color: Color(0xFF65A30D),
   ),
 ];

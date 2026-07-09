@@ -27,13 +27,21 @@ class _CreateRoomPageState extends State<CreateRoomPage> {
   }
 
   void _createRoom() {
+    if (_titleController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Judul kuis tidak boleh kosong.')),
+      );
+      return;
+    }
+
     final room = RoomService.instance.createRoom(
       title: _titleController.text,
       hostName: widget.user.name,
     );
     Navigator.pushReplacement(
       context,
-      MaterialPageRoute(builder: (_) => LobbyPage(user: widget.user, room: room)),
+      MaterialPageRoute(
+          builder: (_) => LobbyPage(user: widget.user, room: room)),
     );
   }
 
@@ -43,20 +51,28 @@ class _CreateRoomPageState extends State<CreateRoomPage> {
       appBar: AppBar(title: const Text('Buat Room')),
       body: ProPage(
         title: 'Buat Sesi Kuis',
-        subtitle: 'Generate room code unik, bagikan ke peserta, lalu pantau semua aktivitas dari dashboard host.',
+        subtitle:
+            'Generate room code unik, bagikan ke peserta, lalu pantau semua aktivitas dari dashboard host.',
         maxWidth: 760,
         child: AppPanel(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const SectionTitle(icon: Icons.meeting_room_outlined, title: 'Sistem Room Code'),
+              const SectionTitle(
+                  icon: Icons.meeting_room_outlined, title: 'Sistem Room Code'),
               const SizedBox(height: 14),
               const Wrap(
                 spacing: 8,
                 runSpacing: 8,
                 children: [
-                  StatusBadge(label: 'Kode unik', icon: Icons.pin_outlined, color: Color(0xFF1D4ED8)),
-                  StatusBadge(label: 'Lobby aktif', icon: Icons.groups_2_outlined, color: Color(0xFF14B8A6)),
+                  StatusBadge(
+                      label: 'Kode unik',
+                      icon: Icons.pin_outlined,
+                      color: Color(0xFF1D4ED8)),
+                  StatusBadge(
+                      label: 'Lobby aktif',
+                      icon: Icons.groups_2_outlined,
+                      color: Color(0xFF14B8A6)),
                 ],
               ),
               const SizedBox(height: 18),

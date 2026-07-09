@@ -1,8 +1,11 @@
+import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../config/supabase_config.dart';
 import '../data/sample_questions.dart';
 import '../models/app_user.dart';
 import '../models/participant.dart';
+import '../models/quiz_question.dart';
+import '../models/quiz_result.dart';
 import '../models/quiz_room.dart';
 
 class SupabaseService {
@@ -20,7 +23,19 @@ class SupabaseService {
   }
 
   Future<void> initialize() async {
+<<<<<<< HEAD
     if (!SupabaseConfig.isConfigured) {
+=======
+    if (!SupabaseConfig.isConfigured) return;
+
+    try {
+      await Supabase.initialize(
+        url: SupabaseConfig.url,
+        publishableKey: SupabaseConfig.anonKey,
+      );
+      _ready = true;
+    } catch (_) {
+>>>>>>> origin/rista-ui
       _ready = false;
       return;
     }
@@ -58,6 +73,8 @@ class SupabaseService {
         'created_at': DateTime.now().toIso8601String(),
       });
 
+      await saveRoomQuestions(room);
+
       for (final participant in room.participants) {
         await addParticipant(room: room, participant: participant);
       }
@@ -87,14 +104,17 @@ class SupabaseService {
     try {
       final roomData =
           await client.from('rooms').select().eq('code', code).maybeSingle();
+<<<<<<< HEAD
 
+=======
+>>>>>>> origin/rista-ui
       if (roomData == null) return null;
 
       final room = QuizRoom(
         code: roomData['code'] as String,
         title: roomData['title'] as String,
         hostName: roomData['host_name'] as String,
-        questions: sampleQuestions,
+        questions: List<QuizQuestion>.from(sampleQuestions),
       );
 
       final phaseName = roomData['phase'] as String? ?? QuizPhase.lobby.name;
@@ -103,6 +123,7 @@ class SupabaseService {
         (phase) => phase.name == phaseName,
         orElse: () => QuizPhase.lobby,
       );
+<<<<<<< HEAD
 
       room.currentQuestionIndex =
           roomData['current_question_index'] as int? ?? 0;
@@ -110,13 +131,53 @@ class SupabaseService {
       final participantRows =
           await client.from('participants').select().eq('room_code', room.code);
 
+=======
+      room.currentQuestionIndex =
+          roomData['current_question_index'] as int? ?? 0;
+      final questionRows = await client
+          .from('room_questions')
+          .select()
+          .eq('room_code', room.code)
+          .order('sort_order');
+      if (questionRows.isNotEmpty) {
+        room.questions
+          ..clear()
+          ..addAll(questionRows.map((row) => _questionFromRow(Map<String, dynamic>.from(row))));
+      }
+
+      final resultRows = await client
+          .from('quiz_results')
+          .select()
+          .eq('room_code', room.code)
+          .order('completed_at', ascending: false);
+      room.results.addAll(resultRows.map((row) => _resultFromRow(Map<String, dynamic>.from(row))));
+
+      final participantRows =
+          await client.from('participants').select().eq('room_code', room.code);
+>>>>>>> origin/rista-ui
       for (final row in participantRows) {
-        room.participants.add(
-          Participant(
-            name: row['name'] as String,
-            score: row['score'] as int? ?? 0,
-          ),
+        final participant = Participant(
+          name: row['name'] as String,
+          score: row['score'] as int? ?? 0,
+          streak: row['streak'] as int? ?? 0,
+          xp: row['xp'] as int? ?? 0,
+          level: row['level'] as int? ?? 1,
         );
+
+        final answerRows = await client
+            .from('answers')
+            .select()
+            .eq('room_code', room.code)
+            .eq('participant_name', participant.name);
+        for (final answerRow in answerRows) {
+          final questionIndex = answerRow['question_index'] as int?;
+          final answerIndex = answerRow['answer_index'] as int?;
+          if (questionIndex != null && answerIndex != null) {
+            participant.answers[questionIndex] = answerIndex;
+          }
+        }
+
+        room.participants.add(participant);
       }
 
       return room;
@@ -137,6 +198,9 @@ class SupabaseService {
         'room_code': room.code,
         'name': participant.name,
         'score': participant.score,
+        'streak': participant.streak,
+        'xp': participant.xp,
+        'level': participant.level,
         'joined_at': DateTime.now().toIso8601String(),
       }, onConflict: 'room_code,name');
     } catch (_) {
@@ -168,6 +232,12 @@ class SupabaseService {
           .from('participants')
           .update({
             'score': participant.score,
+<<<<<<< HEAD
+=======
+            'streak': participant.streak,
+            'xp': participant.xp,
+            'level': participant.level,
+>>>>>>> origin/rista-ui
           })
           .eq('room_code', room.code)
           .eq('name', participant.name);
@@ -176,8 +246,86 @@ class SupabaseService {
     }
   }
 
+<<<<<<< HEAD
   // sesudah
   Future<void> signOut() async {
     await Supabase.instance.client.auth.signOut();
+=======
+  Future<void> saveRoomQuestions(QuizRoom room) async {
+    final client = _client;
+    if (client == null) return;
+
+    try {
+      await client.from('room_questions').delete().eq('room_code', room.code);
+      for (var i = 0; i < room.questions.length; i++) {
+        final question = room.questions[i];
+        await client.from('room_questions').insert({
+          'room_code': room.code,
+          'sort_order': i,
+          'question': question.question,
+          'options': question.options,
+          'correct_index': question.correctIndex,
+          'explanation': question.explanation,
+          'category': question.category,
+          'points': question.points,
+          'color_value': question.color.value,
+        });
+      }
+    } catch (_) {
+      return;
+    }
+  }
+
+  Future<void> saveQuizResult({
+    required QuizRoom room,
+    required QuizResult result,
+  }) async {
+    final client = _client;
+    if (client == null) return;
+
+    try {
+      await client.from('quiz_results').upsert({
+        'room_code': room.code,
+        'participant_name': result.participantName,
+        'total_score': result.totalScore,
+        'correct_answers': result.correctAnswers,
+        'wrong_answers': result.wrongAnswers,
+        'percentage': result.percentage,
+        'grade': result.grade,
+        'completed_at': result.completedAt.toIso8601String(),
+      }, onConflict: 'room_code,participant_name');
+    } catch (_) {
+      return;
+    }
+  }
+
+  QuizQuestion questionFromRow(Map<String, dynamic> row) {
+    final rawOptions = row['options'];
+    final options = rawOptions is List
+        ? rawOptions.map((item) => item.toString()).toList()
+        : <String>['Pilihan A', 'Pilihan B', 'Pilihan C', 'Pilihan D'];
+
+    return QuizQuestion(
+      question: row['question'] as String? ?? '',
+      options: options,
+      correctIndex: row['correct_index'] as int? ?? 0,
+      explanation: row['explanation'] as String? ?? '',
+      category: row['category'] as String? ?? 'Umum',
+      points: row['points'] as int? ?? 100,
+      color: Color(row['color_value'] as int? ?? 0xFF2563EB),
+    );
+  }
+
+  QuizResult resultFromRow(Map<String, dynamic> row) {
+    return QuizResult(
+      participantName: row['participant_name'] as String? ?? 'Peserta',
+      totalScore: row['total_score'] as int? ?? 0,
+      correctAnswers: row['correct_answers'] as int? ?? 0,
+      wrongAnswers: row['wrong_answers'] as int? ?? 0,
+      percentage: (row['percentage'] as num?)?.toDouble() ?? 0,
+      grade: row['grade'] as String? ?? 'D',
+      completedAt: DateTime.tryParse(row['completed_at'] as String? ?? '') ?? DateTime.now(),
+    );
+>>>>>>> origin/rista-ui
   }
 }
