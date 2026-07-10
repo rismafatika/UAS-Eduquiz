@@ -12,18 +12,24 @@ class SectionTitle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     return Row(
       children: [
         Container(
-          width: 46,
-          height: 46,
+          width: 48,
+          height: 48,
           decoration: BoxDecoration(
-            color: Colors.deepPurple.shade50,
-            borderRadius: BorderRadius.circular(14),
+            gradient: LinearGradient(
+              colors: [
+                scheme.primary.withOpacity(.14),
+                scheme.secondary.withOpacity(.10),
+              ],
+            ),
+            borderRadius: BorderRadius.circular(16),
           ),
           child: Icon(
             icon,
-            color: Colors.deepPurple,
+            color: scheme.primary,
             size: 24,
           ),
         ),
@@ -32,9 +38,9 @@ class SectionTitle extends StatelessWidget {
           child: Text(
             title,
             style: const TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.bold,
-              color: Color(0xff1E293B),
+              fontSize: 21,
+              fontWeight: FontWeight.w900,
+              color: Color(0xFF0F172A),
             ),
           ),
         ),

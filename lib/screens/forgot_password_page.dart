@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../widgets/app_panel.dart';
+import '../widgets/pro_page.dart';
+
 class ForgotPasswordPage extends StatefulWidget {
   const ForgotPasswordPage({super.key});
 
@@ -50,30 +53,35 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text("Lupa Password"),
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          children: [
-            TextField(
-              controller: emailController,
-              keyboardType: TextInputType.emailAddress,
-              decoration: const InputDecoration(
-                labelText: "Email",
-                prefixIcon: Icon(Icons.email),
+      appBar: AppBar(title: const Text("Lupa Password")),
+      body: ProPage(
+        title: 'Reset Password',
+        subtitle: 'Masukkan email kamu, lalu Supabase akan mengirim link reset ke inbox.',
+        maxWidth: 640,
+        child: AppPanel(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const Text(
+                'Email akun',
+                style: TextStyle(fontWeight: FontWeight.w900, fontSize: 16),
               ),
-            ),
-            const SizedBox(height: 20),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
+              const SizedBox(height: 10),
+              TextField(
+                controller: emailController,
+                keyboardType: TextInputType.emailAddress,
+                decoration: const InputDecoration(
+                  labelText: "Email",
+                  prefixIcon: Icon(Icons.email),
+                ),
+              ),
+              const SizedBox(height: 20),
+              FilledButton(
                 onPressed: sendReset,
                 child: const Text("Kirim Link Reset"),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

@@ -215,6 +215,26 @@ class _LoginPageState extends State<LoginPage> {
     }
   }
 
+  Future<void> _sendEmailOtp() async {
+    final email = _emailController.text.trim();
+    if (email.isEmpty || !email.contains('@')) {
+      _showSnack('Masukkan email kamu dulu di kolom email.', isError: true);
+      return;
+    }
+
+    setState(() => _isLoading = true);
+    try {
+      await Supabase.instance.client.auth.signInWithOtp(email: email);
+      if (!mounted) return;
+      _showSnack('OTP atau link login sudah dikirim ke $email', isError: false);
+    } on AuthException catch (e) {
+      if (!mounted) return;
+      _showSnack(_authErrorMsg(e.message), isError: true);
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
   void _navigateHome(AppUser user) {
     Navigator.pushReplacement(
       context,
@@ -298,6 +318,7 @@ class _LoginPageState extends State<LoginPage> {
             onLogin: _login,
             onRegister: _register,
             onForgotPassword: _forgotPassword,
+            onSendOtp: _sendEmailOtp,
             onSwitchMode: _switchMode,
             onBack: _goBack,
           ),
@@ -548,6 +569,7 @@ class _FormScreen extends StatefulWidget {
     required this.onLogin,
     required this.onRegister,
     required this.onForgotPassword,
+    required this.onSendOtp,
     required this.onSwitchMode,
     required this.onBack,
   });
@@ -567,6 +589,7 @@ class _FormScreen extends StatefulWidget {
   final AsyncCallback onLogin;
   final AsyncCallback onRegister;
   final VoidCallback onForgotPassword;
+  final VoidCallback onSendOtp;
   final ValueChanged<_FormMode> onSwitchMode;
   final VoidCallback onBack;
 
@@ -813,6 +836,24 @@ class _FormScreenState extends State<_FormScreen>
                                 style: TextStyle(
                                     fontSize: 12.5,
                                     fontWeight: FontWeight.w600),
+                              ),
+                            ),
+                          ),
+                          Align(
+                            alignment: Alignment.centerRight,
+                            child: TextButton.icon(
+                              onPressed: widget.isLoading ? null : widget.onSendOtp,
+                              style: TextButton.styleFrom(
+                                foregroundColor: _EduColors.secondary,
+                                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+                              ),
+                              icon: const Icon(Icons.mark_email_read_outlined, size: 16),
+                              label: const Text(
+                                'Kirim OTP Email',
+                                style: TextStyle(
+                                  fontSize: 12.5,
+                                  fontWeight: FontWeight.w600,
+                                ),
                               ),
                             ),
                           ),

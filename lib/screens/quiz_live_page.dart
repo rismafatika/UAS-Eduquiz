@@ -93,9 +93,18 @@ class _QuizLivePageState extends State<QuizLivePage> {
                           ],
                         ),
                         const SizedBox(height: 12),
-                        LinearProgressIndicator(value: progress.clamp(0.0, 1.0).toDouble()),
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(999),
+                          child: LinearProgressIndicator(
+                            value: progress.clamp(0.0, 1.0).toDouble(),
+                            minHeight: 10,
+                          ),
+                        ),
                         const SizedBox(height: 18),
-                        Text(question.question, style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w900)),
+                        Text(
+                          question.question,
+                          style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w900, height: 1.25),
+                        ),
                         const SizedBox(height: 18),
                         for (var i = 0; i < question.options.length; i++)
                           Padding(
@@ -105,7 +114,7 @@ class _QuizLivePageState extends State<QuizLivePage> {
                               style: OutlinedButton.styleFrom(
                                 alignment: Alignment.centerLeft,
                                 padding: const EdgeInsets.all(16),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
                               ),
                               child: Text(question.options[i]),
                             ),

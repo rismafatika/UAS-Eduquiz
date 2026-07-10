@@ -98,6 +98,13 @@ class _LobbyPageState extends State<LobbyPage> {
                         ),
 
                         const SizedBox(height: 15),
+                        Text(
+                          _isHost
+                              ? 'Peserta yang bergabung akan muncul di bawah. Siap mulai kapan saja.'
+                              : 'Tunggu host memulai quiz. Kamu akan otomatis masuk ketika sesi live dimulai.',
+                          style: const TextStyle(color: Color(0xFF64748B), fontWeight: FontWeight.w600),
+                        ),
+                        const SizedBox(height: 14),
 
                         Wrap(
                           spacing: 10,
@@ -118,25 +125,37 @@ class _LobbyPageState extends State<LobbyPage> {
                         const SizedBox(height: 20),
 
                         if (_isHost)
-                          Wrap(
-                            spacing: 10,
+                          Row(
                             children: [
-                              FilledButton.icon(
-                                onPressed: _startQuiz,
-                                icon: const Icon(Icons.play_arrow),
-                                label: const Text("Mulai Quiz"),
+                              Expanded(
+                                child: FilledButton.icon(
+                                  onPressed: _startQuiz,
+                                  icon: const Icon(Icons.play_arrow),
+                                  label: const Text("Mulai Quiz"),
+                                ),
                               ),
-                              OutlinedButton.icon(
-                                onPressed: _openDashboard,
-                                icon: const Icon(Icons.dashboard),
-                                label: const Text("Dashboard Host"),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: OutlinedButton.icon(
+                                  onPressed: _openDashboard,
+                                  icon: const Icon(Icons.dashboard),
+                                  label: const Text("Dashboard Host"),
+                                ),
                               ),
                             ],
                           )
                         else
-                          const Text(
-                            "Menunggu host memulai quiz...",
-                            style: TextStyle(fontSize: 16),
+                          Container(
+                            padding: const EdgeInsets.all(14),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF8FAFC),
+                              borderRadius: BorderRadius.circular(18),
+                              border: Border.all(color: const Color(0xFFE2E8F0)),
+                            ),
+                            child: const Text(
+                              "Menunggu host memulai quiz...",
+                              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                            ),
                           ),
                       ],
                     ),

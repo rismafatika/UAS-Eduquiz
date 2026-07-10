@@ -19,10 +19,21 @@ class AuthGate extends StatelessWidget {
           return const LoginPage();
         }
 
+        final metadata = session.user.userMetadata ?? const {};
+        final name = (metadata['full_name'] as String?)?.trim().isNotEmpty == true
+            ? metadata['full_name'] as String
+            : (metadata['name'] as String?)?.trim().isNotEmpty == true
+                ? metadata['name'] as String
+                : (session.user.email?.split('@').first ?? 'User');
+        final role = (metadata['role'] as String?) == 'host'
+            ? UserRole.host
+            : UserRole.participant;
+
         final user = AppUser(
-          name: session.user.userMetadata?['name'] ?? 'User',
+          uid: session.user.id,
+          name: name,
           email: session.user.email ?? '',
-          role: UserRole.participant,
+          role: role,
         );
 
         return HomePage(user: user);

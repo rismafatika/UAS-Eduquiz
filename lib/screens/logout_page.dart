@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+
+import '../services/auth_service.dart';
 import 'login_page.dart';
 
 class LogoutPage extends StatelessWidget {
@@ -7,22 +9,26 @@ class LogoutPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: const Text('Logout'),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+      titlePadding: const EdgeInsets.fromLTRB(24, 24, 24, 8),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+      actionsPadding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+      title: const Text('Keluar akun?'),
       content: const Text(
-        'Apakah kamu yakin ingin keluar?',
+        'Kamu akan diarahkan kembali ke halaman masuk setelah logout.',
       ),
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context),
           child: const Text('Batal'),
         ),
-        ElevatedButton(
-          onPressed: () {
+        FilledButton(
+          onPressed: () async {
+            await AuthService.instance.signOut();
+            if (!context.mounted) return;
             Navigator.pushAndRemoveUntil(
               context,
-              MaterialPageRoute(
-                builder: (_) => const LoginPage(),
-              ),
+              MaterialPageRoute(builder: (_) => const LoginPage()),
               (route) => false,
             );
           },

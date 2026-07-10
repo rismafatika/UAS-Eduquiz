@@ -10,6 +10,7 @@ import '../widgets/pro_page.dart';
 import '../widgets/room_header.dart';
 import '../widgets/section_title.dart';
 import '../widgets/status_badge.dart';
+import 'manage_questions_page.dart';
 import 'quiz_live_page.dart';
 import 'review_page.dart';
 
@@ -37,6 +38,13 @@ class _HostDashboardPageState extends State<HostDashboardPage> {
     Navigator.push(
       context,
       MaterialPageRoute(builder: (_) => ReviewPage(user: widget.user, room: widget.room)),
+    );
+  }
+
+  void _openQuestionManager() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => ManageQuestionsPage(user: widget.user, room: widget.room)),
     );
   }
 
@@ -98,7 +106,16 @@ class _HostDashboardPageState extends State<HostDashboardPage> {
     final rankedParticipants = [...widget.room.participants]..sort((a, b) => b.score.compareTo(a.score));
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Dashboard Admin')),
+      appBar: AppBar(
+        title: const Text('Dashboard Admin'),
+        actions: [
+          IconButton(
+            tooltip: 'Kelola Soal',
+            onPressed: _openQuestionManager,
+            icon: const Icon(Icons.edit_note_outlined),
+          ),
+        ],
+      ),
       body: ProPage(
         title: 'Dashboard Admin',
         subtitle: 'Kelola soal, pantau nilai peserta, dan kontrol jalannya sesi quiz dari satu halaman.',
@@ -138,6 +155,11 @@ class _HostDashboardPageState extends State<HostDashboardPage> {
                         onPressed: _addQuestion,
                         icon: const Icon(Icons.add_circle_outline),
                         label: const Text('Tambah Soal'),
+                      ),
+                      OutlinedButton.icon(
+                        onPressed: _openQuestionManager,
+                        icon: const Icon(Icons.edit_note_outlined),
+                        label: const Text('Kelola Soal'),
                       ),
                     ],
                   ),
@@ -214,15 +236,16 @@ class _MetricCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     return AppPanel(
       child: Row(
         children: [
           Container(
-            width: 42,
-            height: 42,
+            width: 46,
+            height: 46,
             decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(8),
+              color: color.withOpacity(.12),
+              borderRadius: BorderRadius.circular(16),
             ),
             child: Icon(icon, color: color),
           ),
@@ -231,7 +254,7 @@ class _MetricCard extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(value, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900)),
-              Text(label, style: const TextStyle(color: Color(0xFF64748B))),
+              Text(label, style: TextStyle(color: scheme.onSurfaceVariant, fontWeight: FontWeight.w600)),
             ],
           ),
         ],
@@ -256,7 +279,12 @@ class _ScoreBoard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const SectionTitle(icon: Icons.leaderboard_outlined, title: 'Nilai Peserta'),
-          const SizedBox(height: 12),
+          const SizedBox(height: 8),
+          const Text(
+            'Urutan skor otomatis berdasarkan performa peserta.',
+            style: TextStyle(color: Color(0xFF64748B), fontWeight: FontWeight.w600),
+          ),
+          const SizedBox(height: 14),
           if (participants.isEmpty)
             const Text('Belum ada peserta yang bergabung.')
           else
@@ -285,6 +313,7 @@ class _ScoreRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     final progress = questionCount == 0 ? 0.0 : participant.answers.length / questionCount;
 
     return Container(
@@ -292,20 +321,42 @@ class _ScoreRow extends StatelessWidget {
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: rank == 1 ? const Color(0xFFFFFBEB) : const Color(0xFFF8FAFC),
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(18),
         border: Border.all(color: rank == 1 ? const Color(0xFFFDE68A) : const Color(0xFFE2E8F0)),
       ),
       child: Column(
         children: [
           Row(
             children: [
-              SizedBox(width: 42, child: Text('#$rank', style: const TextStyle(fontWeight: FontWeight.w900))),
+              Container(
+                width: 42,
+                height: 42,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: rank == 1 ? const Color(0xFFF59E0B).withOpacity(.14) : scheme.primary.withOpacity(.10),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Text(
+                  '#$rank',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w900,
+                    color: rank == 1 ? const Color(0xFF92400E) : scheme.primary,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
               Expanded(child: Text(participant.name, style: const TextStyle(fontWeight: FontWeight.w900))),
               StatusBadge(label: '${participant.score} poin', icon: Icons.star_outline, color: const Color(0xFFF59E0B)),
             ],
           ),
           const SizedBox(height: 10),
-          LinearProgressIndicator(value: progress.clamp(0.0, 1.0).toDouble()),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(999),
+            child: LinearProgressIndicator(
+              value: progress.clamp(0.0, 1.0).toDouble(),
+              minHeight: 8,
+            ),
+          ),
         ],
       ),
     );

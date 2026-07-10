@@ -53,7 +53,15 @@ class LeaderboardPage extends StatelessWidget {
                         const SectionTitle(
                             icon: Icons.leaderboard_outlined,
                             title: 'Leaderboard Otomatis'),
-                        const SizedBox(height: 12),
+                        const SizedBox(height: 8),
+                        const Text(
+                          'Skor disusun otomatis berdasarkan poin dan streak.',
+                          style: TextStyle(color: Color(0xFF64748B), fontWeight: FontWeight.w600),
+                        ),
+                        const SizedBox(height: 16),
+                        if (participants.isNotEmpty)
+                          _Podium(participants: participants.take(3).toList()),
+                        if (participants.isNotEmpty) const SizedBox(height: 16),
                         for (var i = 0; i < participants.length; i++)
                           _RankRow(rank: i + 1, participant: participants[i]),
                         const SizedBox(height: 16),
@@ -111,17 +119,24 @@ class _ResultSummary extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: const Color(0xFF24124D),
-        borderRadius: BorderRadius.circular(8),
+        gradient: const LinearGradient(
+          colors: [
+            Color(0xFF24124D),
+            Color(0xFF4C1D95),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(24),
       ),
       child: Row(
         children: [
           Container(
-            width: 52,
-            height: 52,
+            width: 56,
+            height: 56,
             decoration: BoxDecoration(
               color: const Color(0xFFFFD166),
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(18),
             ),
             child: const Icon(Icons.emoji_events_outlined,
                 color: Color(0xFF24124D)),
@@ -164,25 +179,33 @@ class _RankRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: rank == 1 ? const Color(0xFFFFFBEB) : Colors.white,
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(18),
         border: Border.all(
             color:
                 rank == 1 ? const Color(0xFFFDE68A) : const Color(0xFFE5E7EB)),
       ),
       child: Row(
         children: [
-          SizedBox(
-            width: 44,
+          Container(
+            width: 46,
+            height: 46,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: rank == 1 ? const Color(0xFFF59E0B).withOpacity(.14) : scheme.primary.withOpacity(.10),
+              borderRadius: BorderRadius.circular(14),
+            ),
             child: Text(
               '#$rank',
-              style: const TextStyle(fontWeight: FontWeight.w900),
+              style: TextStyle(fontWeight: FontWeight.w900, color: rank == 1 ? const Color(0xFF92400E) : scheme.primary),
             ),
           ),
+          const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -204,7 +227,7 @@ class _RankRow extends StatelessWidget {
             children: [
               Text(
                 '${participant.score} poin',
-                style: const TextStyle(fontWeight: FontWeight.w800),
+                style: const TextStyle(fontWeight: FontWeight.w900),
               ),
               Text(
                 '${participant.streak} streak',
@@ -212,6 +235,75 @@ class _RankRow extends StatelessWidget {
               ),
             ],
           ),
+        ],
+      ),
+    );
+  }
+}
+
+class _Podium extends StatelessWidget {
+  const _Podium({required this.participants});
+
+  final List<Participant> participants;
+
+  @override
+  Widget build(BuildContext context) {
+    if (participants.isEmpty) return const SizedBox.shrink();
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        if (participants.length > 1) ...[
+          Expanded(child: _PodiumCard(rank: 2, participant: participants[1], height: 86, color: const Color(0xFFCBD5E1))),
+          const SizedBox(width: 10),
+        ],
+        Expanded(child: _PodiumCard(rank: 1, participant: participants.first, height: 110, color: const Color(0xFFF59E0B))),
+        if (participants.length > 2) ...[
+          const SizedBox(width: 10),
+          Expanded(child: _PodiumCard(rank: 3, participant: participants[2], height: 72, color: const Color(0xFFC084FC))),
+        ],
+      ],
+    );
+  }
+}
+
+class _PodiumCard extends StatelessWidget {
+  const _PodiumCard({
+    required this.rank,
+    required this.participant,
+    required this.height,
+    required this.color,
+  });
+
+  final int rank;
+  final Participant participant;
+  final double height;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: height,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: color.withOpacity(.12),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: color.withOpacity(.22)),
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.end,
+        children: [
+          Text('#$rank', style: TextStyle(fontWeight: FontWeight.w900, color: color)),
+          const SizedBox(height: 6),
+          Text(
+            participant.name,
+            textAlign: TextAlign.center,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(fontWeight: FontWeight.w800),
+          ),
+          const SizedBox(height: 4),
+          Text('${participant.score} poin', style: const TextStyle(color: Color(0xFF334155), fontWeight: FontWeight.w700)),
         ],
       ),
     );

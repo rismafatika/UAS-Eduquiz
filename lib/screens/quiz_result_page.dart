@@ -46,26 +46,34 @@ class QuizResultPage extends StatelessWidget {
                         ),
                         const SizedBox(height: 16),
                         Container(
-                          padding: const EdgeInsets.all(18),
+                          padding: const EdgeInsets.all(20),
                           decoration: BoxDecoration(
-                            color: const Color(0xFF0F172A),
-                            borderRadius: BorderRadius.circular(8),
+                            gradient: const LinearGradient(
+                              colors: [
+                                Color(0xFF0F172A),
+                                Color(0xFF1E293B),
+                                Color(0xFF312E81),
+                              ],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            ),
+                            borderRadius: BorderRadius.circular(26),
                           ),
                           child: Row(
                             children: [
                               Container(
-                                width: 58,
-                                height: 58,
+                                width: 70,
+                                height: 70,
                                 alignment: Alignment.center,
                                 decoration: BoxDecoration(
                                   color: const Color(0xFFF59E0B),
-                                  borderRadius: BorderRadius.circular(8),
+                                  borderRadius: BorderRadius.circular(22),
                                 ),
                                 child: Text(
                                   result.grade,
                                   style: const TextStyle(
                                     color: Colors.white,
-                                    fontSize: 28,
+                                    fontSize: 30,
                                     fontWeight: FontWeight.w900,
                                   ),
                                 ),
@@ -119,6 +127,34 @@ class QuizResultPage extends StatelessWidget {
                           },
                         ),
                         const SizedBox(height: 16),
+                        Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF8FAFC),
+                            borderRadius: BorderRadius.circular(22),
+                            border: Border.all(color: const Color(0xFFE2E8F0)),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'Rekap Cepat',
+                                style: TextStyle(fontWeight: FontWeight.w900, fontSize: 16),
+                              ),
+                              const SizedBox(height: 10),
+                              Row(
+                                children: [
+                                  Expanded(child: _MiniStat(icon: Icons.check_circle_outline, label: 'Benar', value: '${result.correctAnswers}')),
+                                  const SizedBox(width: 10),
+                                  Expanded(child: _MiniStat(icon: Icons.cancel_outlined, label: 'Salah', value: '${result.wrongAnswers}')),
+                                  const SizedBox(width: 10),
+                                  Expanded(child: _MiniStat(icon: Icons.percent, label: 'Akurasi', value: '${result.percentage.toStringAsFixed(1)}%')),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 16),
                         Wrap(
                           spacing: 10,
                           runSpacing: 10,
@@ -167,8 +203,8 @@ class _ResultMetric extends StatelessWidget {
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: const Color(0xFFE5E7EB)),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
       ),
       child: Row(
         children: [
@@ -183,6 +219,39 @@ class _ResultMetric extends StatelessWidget {
               ],
             ),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+class _MiniStat extends StatelessWidget {
+  const _MiniStat({
+    required this.icon,
+    required this.label,
+    required this.value,
+  });
+
+  final IconData icon;
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, color: Theme.of(context).colorScheme.primary),
+          const SizedBox(height: 10),
+          Text(value, style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 18)),
+          Text(label, style: const TextStyle(color: Color(0xFF64748B), fontWeight: FontWeight.w600)),
         ],
       ),
     );

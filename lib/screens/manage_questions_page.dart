@@ -104,6 +104,11 @@ class _ManageQuestionsPageState extends State<ManageQuestionsPage> {
                           '${widget.room.questions.length} soal - $totalPoints poin dasar',
                           style: const TextStyle(color: Color(0xFF64748B), fontWeight: FontWeight.w700),
                         ),
+                        const SizedBox(height: 10),
+                        const Text(
+                          'Edit, tambah, atau hapus soal langsung dari sini. Perubahan akan ikut tersimpan ke room aktif.',
+                          style: TextStyle(color: Color(0xFF64748B)),
+                        ),
                         const SizedBox(height: 14),
                         for (var i = 0; i < widget.room.questions.length; i++)
                           _QuestionRow(
@@ -142,54 +147,65 @@ class _QuestionRow extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: const Color(0xFFE5E7EB)),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
       ),
-      child: Row(
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          CircleAvatar(
-            radius: 18,
-            backgroundColor: question.color.withOpacity(0.12),
-            foregroundColor: question.color,
-            child: Text('$number', style: const TextStyle(fontWeight: FontWeight.w900)),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              CircleAvatar(
+                radius: 20,
+                backgroundColor: question.color.withOpacity(0.12),
+                foregroundColor: question.color,
+                child: Text('$number', style: const TextStyle(fontWeight: FontWeight.w900)),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Chip(label: Text(question.category)),
-                    Chip(label: Text('${question.points} poin')),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        Chip(label: Text(question.category)),
+                        Chip(label: Text('${question.points} poin')),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Text(question.question, style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 15.5)),
+                    const SizedBox(height: 6),
+                    Text(
+                      'Jawaban benar: ${question.options[question.correctIndex]}',
+                      style: const TextStyle(color: Color(0xFF166534), fontWeight: FontWeight.w700),
+                    ),
                   ],
                 ),
-                const SizedBox(height: 8),
-                Text(question.question, style: const TextStyle(fontWeight: FontWeight.w900)),
-                const SizedBox(height: 6),
-                Text(
-                  'Jawaban benar: ${question.options[question.correctIndex]}',
-                  style: const TextStyle(color: Color(0xFF166534), fontWeight: FontWeight.w700),
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
-          const SizedBox(width: 8),
-          IconButton(
-            tooltip: 'Edit soal',
-            onPressed: onEdit,
-            icon: const Icon(Icons.edit_outlined),
-          ),
-          IconButton(
-            tooltip: 'Hapus soal',
-            onPressed: onDelete,
-            icon: const Icon(Icons.delete_outline),
+          const SizedBox(height: 10),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              TextButton.icon(
+                onPressed: onEdit,
+                icon: const Icon(Icons.edit_outlined),
+                label: const Text('Edit'),
+              ),
+              const SizedBox(width: 8),
+              TextButton.icon(
+                onPressed: onDelete,
+                icon: const Icon(Icons.delete_outline),
+                label: const Text('Hapus'),
+              ),
+            ],
           ),
         ],
       ),
@@ -272,6 +288,7 @@ class _QuestionFormDialogState extends State<_QuestionFormDialog> {
   Widget build(BuildContext context) {
     return AlertDialog(
       title: Text(widget.question == null ? 'Tambah Soal' : 'Edit Soal'),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
       content: SizedBox(
         width: 620,
         child: Form(
