@@ -1,3 +1,5 @@
+import 'package:eduquiz/models/quiz_question.dart';
+import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../config/supabase_config.dart';
 import '../data/sample_questions.dart';
@@ -28,6 +30,7 @@ class SupabaseService {
     _ready = true;
   }
 
+  // ─── SAVE USER ──────────────────────────────────────────────
   Future<void> saveUser(AppUser user) async {
     final client = _client;
     if (client == null) return;
@@ -44,6 +47,7 @@ class SupabaseService {
     }
   }
 
+  // ─── ROOM ────────────────────────────────────────────────────
   Future<void> createRoom(QuizRoom room) async {
     final client = _client;
     if (client == null) return;
@@ -97,11 +101,11 @@ class SupabaseService {
         questions: sampleQuestions,
       );
 
-      final phaseName = roomData['phase'] as String? ?? QuizPhase.lobby.name;
+      final phaseName = roomData['phase'] as String? ?? QuizPhase.waiting.name;
 
       room.phase = QuizPhase.values.firstWhere(
         (phase) => phase.name == phaseName,
-        orElse: () => QuizPhase.lobby,
+        orElse: () => QuizPhase.waiting,
       );
 
       room.currentQuestionIndex =
@@ -125,6 +129,27 @@ class SupabaseService {
     }
   }
 
+  Future<List<QuizRoom>> getAllRooms() async {
+    final client = _client;
+    if (client == null) return [];
+
+    try {
+      final roomRows = await client.from('rooms').select();
+      final rooms = <QuizRoom>[];
+
+      for (final row in roomRows) {
+        final code = row['code'] as String;
+        final room = await findRoom(code);
+        if (room != null) rooms.add(room);
+      }
+
+      return rooms;
+    } catch (_) {
+      return [];
+    }
+  }
+
+  // ─── PARTICIPANT ─────────────────────────────────────────────
   Future<void> addParticipant({
     required QuizRoom room,
     required Participant participant,
@@ -144,6 +169,7 @@ class SupabaseService {
     }
   }
 
+  // ─── SUBMIT ANSWER ──────────────────────────────────────────
   Future<void> submitAnswer({
     required QuizRoom room,
     required Participant participant,
@@ -176,8 +202,54 @@ class SupabaseService {
     }
   }
 
-  // sesudah
-  Future<void> signOut() async {
-    await Supabase.instance.client.auth.signOut();
+  // ─── REALTIME SUBSCRIPTION (DIPERBAIKI) ────────────────────
+  void subscribeRoom(String roomCode, VoidCallback onUpdate) {
+    final client = _client;
+    if (client == null) return;
+
+    final channel = client.channel('room:$roomCode');
+
+    channel
+        .onPostgresChanges(
+          event: PostgresChangeEvent.all,
+          schema: 'public',
+          table: 'rooms',
+          filter: PostgresChangeFilter(
+            type: PostgresChangeFilterType.eq,
+            column: 'code',
+            value: roomCode,
+          ),
+          callback: (event) => onUpdate(),
+        )
+        .onPostgresChanges(
+          event: PostgresChangeEvent.all,
+          schema: 'public',
+          table: 'participants',
+          filter: PostgresChangeFilter(
+            type: PostgresChangeFilterType.eq,
+            column: 'room_code',
+            value: roomCode,
+          ),
+          callback: (event) => onUpdate(),
+        )
+        .subscribe((status, error) {
+      if (error != null) {
+        print('Error subscribing to room $roomCode: $error');
+      }
+    });
   }
+
+  // ─── SIGNOUT (DIPERBAIKI) ──────────────────────────────────
+  Future<void> signOut() async {
+    try {
+      await Supabase.instance.client.auth.signOut();
+    } catch (e) {
+      print('Error signing out: $e');
+    }
+  }
+
+  Future<void> deleteQuestion(QuizRoom room, String? oldId) async {}
+
+  Future<void> addQuestion(
+      QuizRoom room, int index, QuizQuestion updated) async {}
 }

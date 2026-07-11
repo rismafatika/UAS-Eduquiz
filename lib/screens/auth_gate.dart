@@ -20,6 +20,7 @@ class AuthGate extends StatelessWidget {
         }
 
         final user = AppUser(
+          id: session.user.id,
           name: session.user.userMetadata?['name'] ?? 'User',
           email: session.user.email ?? '',
           role: UserRole.participant,

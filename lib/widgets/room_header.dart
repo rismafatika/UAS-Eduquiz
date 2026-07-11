@@ -1,105 +1,102 @@
 import 'package:flutter/material.dart';
-
 import '../models/quiz_room.dart';
-import 'app_panel.dart';
-import 'status_badge.dart';
 
 class RoomHeader extends StatelessWidget {
-  const RoomHeader({super.key, required this.room});
-
   final QuizRoom room;
+
+  const RoomHeader({super.key, required this.room});
 
   @override
   Widget build(BuildContext context) {
-    return AppPanel(
-      child: Wrap(
-        alignment: WrapAlignment.spaceBetween,
-        crossAxisAlignment: WrapCrossAlignment.center,
-        runSpacing: 14,
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            mainAxisSize: MainAxisSize.min,
             children: [
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Theme.of(context).colorScheme.primary.withOpacity(0.2)),
-                ),
-                child: Icon(Icons.auto_stories_outlined, color: Theme.of(context).colorScheme.primary),
-              ),
-              const SizedBox(width: 12),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    room.title,
-                    style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: Color(0xFF0F172A)),
+              Expanded(
+                child: Text(
+                  room.title,
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w800,
+                    color: Color(0xFF064E3B),
                   ),
-                  const SizedBox(height: 4),
-                  Text('Host: ${room.hostName}', style: const TextStyle(color: Color(0xFF64748B))),
-                ],
+                ),
+              ),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                decoration: BoxDecoration(
+                  color: room.phase == QuizPhase.live
+                      ? Colors.green.shade100
+                      : Colors.orange.shade100,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  room.phase == QuizPhase.live ? '🟢 Live' : '⏳ Menunggu',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: room.phase == QuizPhase.live
+                        ? Colors.green.shade800
+                        : Colors.orange.shade800,
+                  ),
+                ),
               ),
             ],
           ),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            crossAxisAlignment: WrapCrossAlignment.center,
+          const SizedBox(height: 8),
+          Row(
             children: [
-              StatusBadge(label: _phaseLabel(room.phase), icon: _phaseIcon(room.phase), color: _phaseColor(room.phase)),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFEFF6FF),
+                  color: const Color(0xFF0D9488).withOpacity(0.1),
                   borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: const Color(0xFFBFDBFE)),
                 ),
-                child: SelectableText(
-                  room.code,
+                child: Text(
+                  '🔑 ${room.code}',
                   style: const TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.w900,
-                    color: Color(0xFF1D4ED8),
+                    fontSize: 16,
+                    fontWeight: FontWeight.w800,
+                    color: Color(0xFF0D9488),
                   ),
                 ),
               ),
+              const Spacer(),
+              Text(
+                'Host: ${room.hostName}',
+                style: const TextStyle(
+                  fontSize: 13,
+                  color: Color(0xFF6B7280),
+                ),
+              ),
             ],
+          ),
+          const SizedBox(height: 4),
+          Text(
+            '${room.participants.length} peserta',
+            style: const TextStyle(
+              fontSize: 13,
+              color: Color(0xFF6B7280),
+            ),
           ),
         ],
       ),
     );
-  }
-
-  String _phaseLabel(QuizPhase phase) {
-    return switch (phase) {
-      QuizPhase.lobby => 'Lobby',
-      QuizPhase.live => 'Live',
-      QuizPhase.leaderboard => 'Leaderboard',
-      QuizPhase.review => 'Review',
-      QuizPhase.dashboard => 'Dashboard',
-    };
-  }
-
-  IconData _phaseIcon(QuizPhase phase) {
-    return switch (phase) {
-      QuizPhase.lobby => Icons.groups_2_outlined,
-      QuizPhase.live => Icons.bolt,
-      QuizPhase.leaderboard => Icons.leaderboard_outlined,
-      QuizPhase.review => Icons.fact_check_outlined,
-      QuizPhase.dashboard => Icons.dashboard_outlined,
-    };
-  }
-
-  Color _phaseColor(QuizPhase phase) {
-    return switch (phase) {
-      QuizPhase.lobby => const Color(0xFF1D4ED8),
-      QuizPhase.live => const Color(0xFF14B8A6),
-      QuizPhase.leaderboard => const Color(0xFFF59E0B),
-      QuizPhase.review => const Color(0xFF7C3AED),
-      QuizPhase.dashboard => const Color(0xFF0F172A),
-    };
   }
 }

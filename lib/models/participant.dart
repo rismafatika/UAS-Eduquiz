@@ -1,91 +1,62 @@
 class Participant {
+  final String id;
+  final String name;
+  int score;
+  Map<int, int> answers;
+  final DateTime joinedAt;
+
   Participant({
+    this.id = '',
     required this.name,
     this.score = 0,
-    this.streak = 0,
-    this.xp = 0,
-    this.level = 1,
-    this.avatar,
-    this.isOnline = true,
-    Map<int, int>? answers,
-  }) : answers = answers ?? {};
-
-  // Informasi Peserta
-  final String name;
-  final String? avatar;
-  bool isOnline;
-
-  // Statistik Quiz
-  int score;
-  int streak;
-  int xp;
-  int level;
-
-  // Key = nomor soal
-  // Value = index jawaban yang dipilih
-  final Map<int, int> answers;
-
-  // Tambah skor dan XP
-  void addScore(int points) {
-    score += points;
-    xp += points;
-
-    // Naik level setiap 500 XP
-    level = (xp ~/ 500) + 1;
-  }
-
-  // Saat jawaban benar
-  void correctAnswer({int points = 100}) {
-    streak++;
-    addScore(points);
-  }
-
-  // Saat jawaban salah
-  void wrongAnswer() {
-    streak = 0;
-  }
-
-  // Gelar berdasarkan level
-  String get rankTitle {
-    if (level >= 10) return 'Quiz Master';
-    if (level >= 7) return 'Quiz Expert';
-    if (level >= 4) return 'Quiz Pro';
-    return 'Beginner';
-  }
+    this.answers = const {},
+    DateTime? joinedAt,
+  }) : joinedAt = joinedAt ?? DateTime.now();
 
   Participant copyWith({
+    String? id,
     String? name,
-    String? avatar,
-    bool? isOnline,
     int? score,
-    int? streak,
-    int? xp,
-    int? level,
     Map<int, int>? answers,
+    DateTime? joinedAt,
   }) {
     return Participant(
+      id: id ?? this.id,
       name: name ?? this.name,
-      avatar: avatar ?? this.avatar,
-      isOnline: isOnline ?? this.isOnline,
       score: score ?? this.score,
-      streak: streak ?? this.streak,
-      xp: xp ?? this.xp,
-      level: level ?? this.level,
-      answers: answers ?? Map<int, int>.from(this.answers),
+      answers: answers ?? this.answers,
+      joinedAt: joinedAt ?? this.joinedAt,
     );
   }
 
-  @override
-  String toString() {
-    return '''
-Participant(
-  name: $name,
-  score: $score,
-  streak: $streak,
-  xp: $xp,
-  level: $level,
-  online: $isOnline
-)
-''';
+  Map<String, dynamic> toJson(String roomCode) {
+    return {
+      'room_code': roomCode,
+      'name': name,
+      'score': score,
+      'answers': answers,
+    };
+  }
+
+  factory Participant.fromJson(Map<String, dynamic> json) {
+    Map<int, int> parsedAnswers = {};
+    if (json['answers'] is Map) {
+      final answersMap = json['answers'] as Map;
+      parsedAnswers = answersMap.map((key, value) {
+        final questionIndex = int.tryParse(key.toString()) ?? 0;
+        final selectedOption = (value as num).toInt();
+        return MapEntry(questionIndex, selectedOption);
+      });
+    }
+
+    return Participant(
+      id: json['id'] ?? '',
+      name: json['name'] ?? '',
+      score: json['score'] ?? 0,
+      answers: parsedAnswers,
+      joinedAt: json['joined_at'] != null
+          ? DateTime.parse(json['joined_at'])
+          : DateTime.now(),
+    );
   }
 }

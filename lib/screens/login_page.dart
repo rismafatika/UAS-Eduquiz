@@ -116,7 +116,15 @@ class _LoginPageState extends State<LoginPage> {
       final roleStr = meta['role'] as String? ?? 'participant';
       final role = roleStr == 'host' ? UserRole.host : UserRole.participant;
 
-      final user = AppUser(name: name, email: email, role: role);
+      // ═══════════════════════════════════════════════════════════
+      // 🔧 PERBAIKAN 1: Tambahkan id pada AppUser
+      // ═══════════════════════════════════════════════════════════
+      final user = AppUser(
+        id: supaUser.id, // ← TAMBAHKAN INI
+        name: name,
+        email: email,
+        role: role,
+      );
       unawaited(SupabaseService.instance.saveUser(user));
 
       if (!mounted) return;
@@ -179,7 +187,15 @@ class _LoginPageState extends State<LoginPage> {
         _switchMode(_FormMode.login);
       } else if (res.session != null) {
         // Langsung masuk (email confirmation dimatikan di Supabase)
-        final user = AppUser(name: name, email: email, role: _role);
+        // ═══════════════════════════════════════════════════════════
+        // 🔧 PERBAIKAN 2: Tambahkan id pada AppUser
+        // ═══════════════════════════════════════════════════════════
+        final user = AppUser(
+          id: res.user!.id, // ← TAMBAHKAN INI
+          name: name,
+          email: email,
+          role: _role,
+        );
         unawaited(SupabaseService.instance.saveUser(user));
         _navigateHome(user);
       }

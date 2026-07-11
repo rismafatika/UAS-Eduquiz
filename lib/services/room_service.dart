@@ -1,6 +1,5 @@
-import 'dart:async';
 import 'dart:math';
-
+import 'package:flutter/material.dart';
 import '../data/sample_questions.dart';
 import '../models/participant.dart';
 import '../models/quiz_question.dart';
@@ -9,176 +8,237 @@ import 'supabase_service.dart';
 
 class RoomService {
   RoomService._();
-
   static final RoomService instance = RoomService._();
 
-  final Map<String, QuizRoom> _rooms = {};
+  final Map<String, QuizRoom> _cache = {};
+  final SupabaseService _supabase = SupabaseService.instance;
 
-  QuizRoom createRoom({
-    required String title,
-    required String hostName,
-  }) {
+  // ─── BUAT ROOM ──────────────────────────────────────────────
+  Future<QuizRoom> createRoom(
+      {required String title, required String hostName}) async {
     final code = _generateCode();
     final room = QuizRoom(
       code: code,
       title: title.trim().isEmpty ? 'Kuis EduQuiz' : title.trim(),
       hostName: hostName,
-      questions: sampleQuestions,
+      questions: List.from(sampleQuestions),
     );
-
-    room.participants.addAll([
-      Participant(name: 'Dina'),
-      Participant(name: 'Rafi'),
-      Participant(name: 'Salsa'),
-    ]);
-
-    _rooms[code] = room;
-    unawaited(SupabaseService.instance.createRoom(room));
+    _cache[code] = room;
+    try {
+      await _supabase.createRoom(room);
+    } catch (e) {
+      _logError('Supabase error (createRoom)', e);
+    }
     return room;
   }
 
-  Future<QuizRoom?> findRoomConnected(String code) async {
-    final normalizedCode = code.trim().toUpperCase();
-    final localRoom = _rooms[normalizedCode];
-    if (localRoom != null) return localRoom;
-
-    final remoteRoom = await SupabaseService.instance.findRoom(normalizedCode);
-    if (remoteRoom != null) {
-      _rooms[remoteRoom.code] = remoteRoom;
-    }
-    return remoteRoom;
+  // ─── GET ALL ROOMS ──────────────────────────────────────────
+  List<QuizRoom> getAllRooms() {
+    return _cache.values.toList();
   }
 
-  Participant addParticipant({
-    required QuizRoom room,
-    required String name,
-  }) {
-    final existing = room.participants.where((item) => item.name == name);
+  // ─── SYNC ────────────────────────────────────────────────────
+  Future<void> syncRooms() async {
+    try {
+      final rooms = await _supabase.getAllRooms();
+      for (var room in rooms) {
+        _cache[room.code] = room;
+      }
+    } catch (e) {
+      _logError('Sync error', e);
+    }
+  }
+
+  // ─── FIND ROOM ──────────────────────────────────────────────
+  Future<QuizRoom?> findRoomConnected(String code) async {
+    final normalized = code.trim().toUpperCase();
+    if (_cache.containsKey(normalized)) {
+      return _cache[normalized];
+    }
+    try {
+      final room = await _supabase.findRoom(normalized);
+      if (room != null) _cache[room.code] = room;
+      return room;
+    } catch (e) {
+      _logError('Find room error', e);
+      return null;
+    }
+  }
+
+  // ─── GET ROOM (SYNC) ────────────────────────────────────────
+  QuizRoom? getRoom(String code) {
+    return _cache[code.trim().toUpperCase()];
+  }
+
+  // ─── ADD PARTICIPANT ────────────────────────────────────────
+  Future<Participant> addParticipant(
+      {required QuizRoom room, required String name}) async {
+    final existing = room.participants.where((p) => p.name == name);
     if (existing.isNotEmpty) return existing.first;
 
     final participant = Participant(name: name);
     room.participants.add(participant);
-    unawaited(SupabaseService.instance
-        .addParticipant(room: room, participant: participant));
+    _cache[room.code] = room;
+    try {
+      await _supabase.updateRoom(room);
+    } catch (e) {
+      _logError('Add participant error', e);
+    }
     return participant;
   }
 
-  void startQuiz(QuizRoom room) {
+  // ─── START QUIZ ─────────────────────────────────────────────
+  Future<void> startQuiz(QuizRoom room) async {
     room.phase = QuizPhase.live;
     room.currentQuestionIndex = 0;
-    for (final participant in room.participants) {
-      participant.score = 0;
-      participant.answers.clear();
+    for (final p in room.participants) p.score = 0;
+    _cache[room.code] = room;
+    try {
+      await _supabase.updateRoom(room);
+    } catch (e) {
+      _logError('Start quiz error', e);
     }
-    unawaited(SupabaseService.instance.updateRoom(room));
   }
 
-  void answerQuestion({
+  // ─── ANSWER ─────────────────────────────────────────────────
+  Future<void> answerQuestion({
     required QuizRoom room,
     required Participant participant,
     required int answerIndex,
-  }) {
-    final questionIndex = room.currentQuestionIndex;
-    final question = room.questions[questionIndex];
+  }) async {
+    final questionIdx = room.currentQuestionIndex;
+    final question = room.questions[questionIdx];
     final isCorrect = answerIndex == question.correctIndex;
 
-    participant.answers[questionIndex] = answerIndex;
-    if (isCorrect) {
-      participant.score += 100;
-    }
+    participant.answers[questionIdx] = answerIndex;
+    if (isCorrect) participant.score += 100;
 
-    unawaited(
-      SupabaseService.instance.submitAnswer(
+    _cache[room.code] = room;
+    try {
+      await _supabase.submitAnswer(
         room: room,
         participant: participant,
-        questionIndex: questionIndex,
+        questionIndex: questionIdx,
         answerIndex: answerIndex,
         isCorrect: isCorrect,
-      ),
-    );
+      );
+    } catch (e) {
+      _logError('Answer error', e);
+    }
 
-    _simulateOtherParticipants(room, questionIndex, participant.name);
-
-    if (questionIndex == room.questions.length - 1) {
+    if (questionIdx == room.questions.length - 1) {
       room.phase = QuizPhase.leaderboard;
     } else {
       room.currentQuestionIndex++;
     }
-    unawaited(SupabaseService.instance.updateRoom(room));
+    _cache[room.code] = room;
+    try {
+      await _supabase.updateRoom(room);
+    } catch (e) {
+      _logError('Update after answer error', e);
+    }
   }
 
-  void showLeaderboard(QuizRoom room) {
+  // ─── CHANGE PHASE ───────────────────────────────────────────
+  Future<void> showLeaderboard(QuizRoom room) async {
     room.phase = QuizPhase.leaderboard;
-    unawaited(SupabaseService.instance.updateRoom(room));
+    _cache[room.code] = room;
+    try {
+      await _supabase.updateRoom(room);
+    } catch (e) {
+      _logError('Show leaderboard error', e);
+    }
   }
 
-  void showReview(QuizRoom room) {
+  Future<void> showReview(QuizRoom room) async {
     room.phase = QuizPhase.review;
-    unawaited(SupabaseService.instance.updateRoom(room));
+    _cache[room.code] = room;
+    try {
+      await _supabase.updateRoom(room);
+    } catch (e) {
+      _logError('Show review error', e);
+    }
   }
 
-  void showDashboard(QuizRoom room) {
+  Future<void> showDashboard(QuizRoom room) async {
     room.phase = QuizPhase.dashboard;
-    unawaited(SupabaseService.instance.updateRoom(room));
+    _cache[room.code] = room;
+    try {
+      await _supabase.updateRoom(room);
+    } catch (e) {
+      _logError('Show dashboard error', e);
+    }
   }
 
-  // ── Tambah soal baru ke room ──
-  void addQuestion(QuizRoom room, QuizQuestion question) {
-    room.questions.add(question);
+  // ─── CRUD SOAL (TANPA copyWith) ────────────────────────────
+  Future<void> addQuestion(QuizRoom room, QuizQuestion question) async {
+    final newQuestion = QuizQuestion(
+      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      question: question.question,
+      options: List.from(question.options),
+      correctIndex: question.correctIndex,
+      explanation: question.explanation,
+      category: question.category ?? 'Umum',
+      points: question.points ?? 100,
+      color: question.color ?? const Color(0xFF1D4ED8),
+    );
+    room.questions.add(newQuestion);
+    _cache[room.code] = room;
+    try {
+      await _supabase.addQuestion(room, room.questions.length - 1, newQuestion);
+    } catch (e) {
+      _logError('Add question error', e);
+    }
   }
 
-  // ── Update soal di room berdasarkan index ──
-  void updateQuestion(QuizRoom room, int index, QuizQuestion question) {
+  Future<void> updateQuestion(
+      QuizRoom room, int index, QuizQuestion newQuestion) async {
     if (index < 0 || index >= room.questions.length) return;
-    room.questions[index] = question;
+    final oldId = room.questions[index].id;
+    final updated = QuizQuestion(
+      id: oldId,
+      question: newQuestion.question,
+      options: List.from(newQuestion.options),
+      correctIndex: newQuestion.correctIndex,
+      explanation: newQuestion.explanation,
+      category: newQuestion.category ?? 'Umum',
+      points: newQuestion.points ?? 100,
+      color: newQuestion.color ?? const Color(0xFF1D4ED8),
+    );
+    room.questions[index] = updated;
+    _cache[room.code] = room;
+    try {
+      await _supabase.addQuestion(room, index, updated);
+    } catch (e) {
+      _logError('Update question error', e);
+    }
   }
 
-  // ── Hapus soal dari room berdasarkan index ──
-  void removeQuestion(QuizRoom room, int index) {
+  Future<void> removeQuestion(QuizRoom room, int index) async {
     if (index < 0 || index >= room.questions.length) return;
+    final oldId = room.questions[index].id;
     room.questions.removeAt(index);
+    _cache[room.code] = room;
+    try {
+      await _supabase.deleteQuestion(room, oldId);
+    } catch (e) {
+      _logError('Delete question error', e);
+    }
+  }
+
+  // ─── HELPER ──────────────────────────────────────────────────
+  void _logError(String context, Object error) {
+    debugPrint('$context: $error');
   }
 
   String _generateCode() {
     const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
     final random = Random();
     String code;
-
     do {
       code =
           List.generate(6, (_) => chars[random.nextInt(chars.length)]).join();
-    } while (_rooms.containsKey(code));
-
+    } while (_cache.containsKey(code));
     return code;
-  }
-
-  void _simulateOtherParticipants(
-      QuizRoom room, int questionIndex, String activeName) {
-    final random = Random();
-    final question = room.questions[questionIndex];
-
-    for (final participant in room.participants) {
-      if (participant.name == activeName ||
-          participant.answers.containsKey(questionIndex)) {
-        continue;
-      }
-
-      final answer = random.nextInt(question.options.length);
-      final isCorrect = answer == question.correctIndex;
-      participant.answers[questionIndex] = answer;
-      if (isCorrect) {
-        participant.score += 100;
-      }
-
-      unawaited(
-        SupabaseService.instance.submitAnswer(
-          room: room,
-          participant: participant,
-          questionIndex: questionIndex,
-          answerIndex: answer,
-          isCorrect: isCorrect,
-        ),
-      );
-    }
   }
 }

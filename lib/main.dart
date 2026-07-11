@@ -1,19 +1,25 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-import 'config/supabase_config.dart';
-import 'services/supabase_service.dart';
-import 'screens/auth_gate.dart';
+// ─── IMPORT AUTH_GATE ──────────────────────────────────────
+import 'screens/auth_gate.dart'; // ← TAMBAHKAN INI
+
+// ─── GANTI DENGAN DATA SUPABASE ANDA ──────────────────────
+const String supabaseUrl = 'https://kuubwgcedzhetxowbpmu.supabase.co';
+const String supabaseAnonKey = 'sb_publishable_QohMi69PpUtiLgNJakAE-g_wLrVzc2B';
+// ─────────────────────────────────────────────────────────────
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  await Supabase.initialize(
-    url: SupabaseConfig.url,
-    anonKey: SupabaseConfig.anonKey,
-  );
-
-  await SupabaseService.instance.initialize();
+  try {
+    await Supabase.initialize(
+      url: supabaseUrl,
+      anonKey: supabaseAnonKey,
+    );
+  } catch (e) {
+    print('Supabase initialization failed: $e');
+  }
 
   runApp(const MyApp());
 }
