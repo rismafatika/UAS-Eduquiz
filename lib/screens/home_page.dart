@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 
 import '../models/app_user.dart';
 import '../services/supabase_service.dart';
+import '../widgets/eduquiz_logo.dart';
 import 'create_room_page.dart';
 import 'join_room_page.dart';
 import 'logout_page.dart';
@@ -147,8 +148,10 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                   color: _EduColors.white.withOpacity(0.15),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: const Icon(Icons.school_rounded,
-                    color: _EduColors.white, size: 24),
+                child: const EduQuizLogo(
+                  size: 42,
+                  borderRadius: 12,
+                ),
               ),
               const SizedBox(width: 12),
               const Text(

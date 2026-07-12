@@ -4,6 +4,7 @@ import '../models/app_user.dart';
 import '../services/supabase_service.dart';
 import 'home_page.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../widgets/eduquiz_logo.dart';
 
 // ─────────────────────────────────────────────────────────────
 // WARNA TEMA
@@ -403,8 +404,10 @@ class _IntroScreenState extends State<_IntroScreen>
                           border: Border.all(
                               color: Colors.white.withOpacity(0.3), width: 1.5),
                         ),
-                        child: const Icon(Icons.school_outlined,
-                            color: Colors.white, size: 40),
+                        child: const EduQuizLogo(
+                          size: 72,
+                          borderRadius: 20,
+                        ),
                       ),
                       const SizedBox(height: 32),
 
