@@ -5,20 +5,6 @@ import '../models/quiz_room.dart';
 import '../services/room_service.dart';
 import 'leaderboard_page.dart';
 
-// ─── KONSTAN WARNA ──────────────────────────────────────────
-class _C {
-  static const teal = Color(0xFF0D9488);
-  static const orange = Color(0xFFEA580C);
-  static const bg = Color(0xFFF8FAFC);
-  static const dark = Color(0xFF0F172A);
-  static const muted = Color(0xFF94A3B8);
-  static const border = Color(0xFFE2E8F0);
-  static const inputBg = Color(0xFFF1F5F9);
-  static const green = Color(0xFF059669);
-  static const red = Color(0xFFDC2626);
-}
-
-// ─── PAGE ────────────────────────────────────────────────────
 class QuizLivePage extends StatefulWidget {
   const QuizLivePage({super.key, required this.user, required this.room});
   final AppUser user;
@@ -37,35 +23,41 @@ class _QuizLivePageState extends State<QuizLivePage>
   bool _isLoading = true;
 
   bool get _isHost => widget.user.role == UserRole.host;
-  Color get _primary => _isHost ? _C.orange : _C.teal;
+  Color get _primary =>
+      _isHost ? const Color(0xFFEA580C) : const Color(0xFF0D9488);
 
-  // ─── INIT ──────────────────────────────────────────────────
   @override
   void initState() {
     super.initState();
-    _pulseCtrl = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 1),
-    )..repeat(reverse: true);
+    _pulseCtrl =
+        AnimationController(vsync: this, duration: const Duration(seconds: 1))
+          ..repeat(reverse: true);
     _initParticipant();
   }
 
   Future<void> _initParticipant() async {
     try {
+      // Coba tambahkan peserta (jika sudah ada, akan return existing)
       final p = await RoomService.instance.addParticipant(
         room: widget.room,
         name: widget.user.name,
       );
-      if (mounted)
+      if (mounted) {
         setState(() {
           _participant = p;
           _isLoading = false;
         });
+      }
     } catch (e) {
-      if (mounted) setState(() => _isLoading = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Gagal masuk: $e'), backgroundColor: Colors.red),
-      );
+      // Jika gagal, tetap lanjut dengan participant dummy (tanpa score)
+      print('Participant init error: $e');
+      if (mounted) {
+        setState(() {
+          // Buat participant lokal agar tetap bisa jalan
+          _participant = Participant(name: widget.user.name, score: 0);
+          _isLoading = false;
+        });
+      }
     }
   }
 
@@ -75,36 +67,27 @@ class _QuizLivePageState extends State<QuizLivePage>
     super.dispose();
   }
 
-  // ─── ANSWER LOGIC ──────────────────────────────────────────
-  Future<void> _answer(int index) async {
+  void _answer(int index) {
     if (_answered || _isHost || _participant == null) return;
-
-    // Tampilkan jawaban terpilih
     setState(() {
       _selectedAnswer = index;
       _answered = true;
     });
 
-    // Kirim jawaban ke service (await agar perubahan phase terdeteksi)
-    await RoomService.instance.answerQuestion(
+    RoomService.instance.answerQuestion(
       room: widget.room,
       participant: _participant!,
       answerIndex: index,
     );
 
-    // Jika phase berubah menjadi leaderboard (soal terakhir) -> pindah
-    if (widget.room.phase == QuizPhase.leaderboard) {
-      _goLeaderboard();
-    } else {
-      // Reset untuk soal berikutnya
-      Future.delayed(const Duration(milliseconds: 800), () {
-        if (mounted)
-          setState(() {
-            _selectedAnswer = null;
-            _answered = false;
-          });
-      });
-    }
+    Future.delayed(const Duration(milliseconds: 800), () {
+      if (mounted) {
+        setState(() {
+          _selectedAnswer = null;
+          _answered = false;
+        });
+      }
+    });
   }
 
   void _finishFromHost() {
@@ -121,22 +104,29 @@ class _QuizLivePageState extends State<QuizLivePage>
     );
   }
 
-  // ─── BUILD ──────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
       return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              CircularProgressIndicator(),
+              SizedBox(height: 16),
+              Text('Memulai kuis...'),
+            ],
+          ),
+        ),
       );
     }
 
-    final currentQuestion =
-        widget.room.questions[widget.room.currentQuestionIndex];
+    final question = widget.room.questions[widget.room.currentQuestionIndex];
     final progress =
         (widget.room.currentQuestionIndex + 1) / widget.room.questions.length;
 
     return Scaffold(
-      backgroundColor: _C.bg,
+      backgroundColor: const Color(0xFFF8FAFC),
       body: Column(
         children: [
           _buildHeader(progress),
@@ -150,20 +140,18 @@ class _QuizLivePageState extends State<QuizLivePage>
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       _QuestionCard(
-                        question: currentQuestion.question,
-                        primary: _primary,
-                      ),
+                          question: question.question, primary: _primary),
                       const SizedBox(height: 16),
                       ...List.generate(
-                        currentQuestion.options.length,
+                        question.options.length,
                         (i) => Padding(
                           padding: const EdgeInsets.only(bottom: 10),
                           child: _AnswerTile(
-                            label: currentQuestion.options[i],
+                            label: question.options[i],
                             index: i,
                             selected: _selectedAnswer,
                             answered: _answered,
-                            correctIndex: currentQuestion.correctIndex,
+                            correctIndex: question.correctIndex,
                             isHost: _isHost,
                             primary: _primary,
                             onTap: () => _answer(i),
@@ -184,7 +172,6 @@ class _QuizLivePageState extends State<QuizLivePage>
     );
   }
 
-  // ─── HEADER ─────────────────────────────────────────────────
   Widget _buildHeader(double progress) {
     return Container(
       decoration: BoxDecoration(
@@ -207,209 +194,175 @@ class _QuizLivePageState extends State<QuizLivePage>
       padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
       child: SafeArea(
         bottom: false,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                GestureDetector(
-                  onTap: () => Navigator.pop(context),
-                  child: Container(
-                    width: 36,
-                    height: 36,
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.2),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: const Icon(
-                      Icons.arrow_back_rounded,
-                      color: Colors.white,
-                      size: 18,
-                    ),
-                  ),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Row(children: [
+            GestureDetector(
+              onTap: () => Navigator.pop(context),
+              child: Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(10),
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    widget.room.title,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w800,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Text(
-                    'Soal ${widget.room.currentQuestionIndex + 1}/${widget.room.questions.length}',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 12.5,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ),
-              ],
+                child: const Icon(Icons.arrow_back_rounded,
+                    color: Colors.white, size: 18),
+              ),
             ),
-            const SizedBox(height: 14),
-            Row(
-              children: [
-                Expanded(
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(99),
-                    child: LinearProgressIndicator(
-                      value: progress,
-                      backgroundColor: Colors.white.withOpacity(0.2),
-                      valueColor: const AlwaysStoppedAnimation(Colors.white),
-                      minHeight: 7,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                if (!_isHost && _participant != null)
-                  Text(
-                    '${_participant!.score} poin',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-              ],
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                widget.room.title,
+                style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w800),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
             ),
-          ],
-        ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Text(
+                'Soal ${widget.room.currentQuestionIndex + 1}/${widget.room.questions.length}',
+                style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w700),
+              ),
+            ),
+          ]),
+          const SizedBox(height: 14),
+          Row(children: [
+            Expanded(
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(99),
+                child: LinearProgressIndicator(
+                  value: progress,
+                  backgroundColor: Colors.white.withOpacity(0.2),
+                  valueColor: const AlwaysStoppedAnimation(Colors.white),
+                  minHeight: 7,
+                ),
+              ),
+            ),
+            const SizedBox(width: 10),
+            if (!_isHost && _participant != null)
+              Text(
+                '${_participant!.score} poin',
+                style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700),
+              ),
+          ]),
+        ]),
       ),
     );
   }
 
-  // ─── HOST CONTROLS ─────────────────────────────────────────
   Widget _buildHostControls() {
-    return Column(
-      children: [
-        Container(
-          padding: const EdgeInsets.all(16),
+    return Column(children: [
+      Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(14),
+          boxShadow: [
+            BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10)
+          ],
+        ),
+        child: Row(children: [
+          Icon(Icons.people_outline_rounded, color: _primary, size: 20),
+          const SizedBox(width: 10),
+          Text(
+            '${widget.room.participants.length} peserta aktif',
+            style: const TextStyle(
+                fontSize: 13.5,
+                fontWeight: FontWeight.w700,
+                color: Color(0xFF0F172A)),
+          ),
+          const Spacer(),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            decoration: BoxDecoration(
+              color: const Color(0xFF059669).withOpacity(0.1),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: const Text('Live',
+                style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF059669))),
+          ),
+        ]),
+      ),
+      const SizedBox(height: 12),
+      SizedBox(
+        width: double.infinity,
+        height: 50,
+        child: DecoratedBox(
           decoration: BoxDecoration(
-            color: Colors.white,
+            gradient:
+                LinearGradient(colors: [_primary, _primary.withOpacity(0.8)]),
             borderRadius: BorderRadius.circular(14),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.05),
-                blurRadius: 10,
-              ),
-            ],
-          ),
-          child: Row(
-            children: [
-              Icon(Icons.people_outline_rounded, color: _primary, size: 20),
-              const SizedBox(width: 10),
-              Text(
-                '${widget.room.participants.length} peserta aktif',
-                style: const TextStyle(
-                  fontSize: 13.5,
-                  fontWeight: FontWeight.w700,
-                  color: _C.dark,
-                ),
-              ),
-              const Spacer(),
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(
-                  color: _C.green.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: const Text(
-                  'Live',
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w700,
-                    color: _C.green,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 12),
-        SizedBox(
-          width: double.infinity,
-          height: 50,
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [_primary, _primary.withOpacity(0.8)],
-              ),
-              borderRadius: BorderRadius.circular(14),
-              boxShadow: [
-                BoxShadow(
                   color: _primary.withOpacity(0.35),
                   blurRadius: 14,
-                  offset: const Offset(0, 6),
-                ),
-              ],
+                  offset: const Offset(0, 6)),
+            ],
+          ),
+          child: ElevatedButton.icon(
+            onPressed: _finishFromHost,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.transparent,
+              shadowColor: Colors.transparent,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14)),
             ),
-            child: ElevatedButton.icon(
-              onPressed: _finishFromHost,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.transparent,
-                shadowColor: Colors.transparent,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14),
-                ),
-              ),
-              icon: const Icon(Icons.leaderboard_outlined, color: Colors.white),
-              label: const Text(
-                'Tampilkan Leaderboard',
-                style: TextStyle(
+            icon: const Icon(Icons.leaderboard_outlined, color: Colors.white),
+            label: const Text(
+              'Tampilkan Leaderboard',
+              style: TextStyle(
                   color: Colors.white,
                   fontWeight: FontWeight.w700,
-                  fontSize: 15,
-                ),
-              ),
+                  fontSize: 15),
             ),
           ),
         ),
-      ],
-    );
+      ),
+    ]);
   }
 
-  // ─── ANSWERED NOTE ─────────────────────────────────────────
   Widget _buildAnsweredNote() {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: _C.green.withOpacity(0.08),
+        color: const Color(0xFF059669).withOpacity(0.08),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: _C.green.withOpacity(0.2)),
+        border: Border.all(color: const Color(0xFF059669).withOpacity(0.2)),
       ),
-      child: Row(
-        children: [
-          const Icon(Icons.check_circle_rounded, color: _C.green, size: 18),
-          const SizedBox(width: 8),
-          const Text(
-            'Jawaban tersimpan! Menunggu soal berikutnya...',
-            style: TextStyle(
+      child: Row(children: [
+        const Icon(Icons.check_circle_rounded,
+            color: Color(0xFF059669), size: 18),
+        const SizedBox(width: 8),
+        const Text(
+          'Jawaban tersimpan! Menunggu soal berikutnya...',
+          style: TextStyle(
               fontSize: 13,
-              color: _C.green,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ],
-      ),
+              color: Color(0xFF059669),
+              fontWeight: FontWeight.w600),
+        ),
+      ]),
     );
   }
 }
 
-// ─── WIDGET PERTANYAAN ──────────────────────────────────────
+// ─── Kartu Pertanyaan ────────────────────────────────────────
 class _QuestionCard extends StatelessWidget {
   const _QuestionCard({required this.question, required this.primary});
   final String question;
@@ -431,48 +384,34 @@ class _QuestionCard extends StatelessWidget {
           ),
         ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(6),
-                decoration: BoxDecoration(
-                  color: primary.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child:
-                    Icon(Icons.help_outline_rounded, color: primary, size: 16),
-              ),
-              const SizedBox(width: 8),
-              Text(
-                'Pertanyaan',
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w700,
-                  color: primary,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 14),
-          Text(
-            question,
-            style: const TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.w900,
-              color: _C.dark,
-              height: 1.4,
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [
+          Container(
+            padding: const EdgeInsets.all(6),
+            decoration: BoxDecoration(
+              color: primary.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(8),
             ),
+            child: Icon(Icons.help_outline_rounded, color: primary, size: 16),
           ),
-        ],
-      ),
+          const SizedBox(width: 8),
+          Text('Pertanyaan',
+              style: TextStyle(
+                  fontSize: 12, fontWeight: FontWeight.w700, color: primary)),
+        ]),
+        const SizedBox(height: 14),
+        Text(question,
+            style: const TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.w900,
+                color: Color(0xFF0F172A),
+                height: 1.4)),
+      ]),
     );
   }
 }
 
-// ─── WIDGET PILIHAN JAWABAN ─────────────────────────────────
+// ─── Tile Pilihan Jawaban ──────────────────────────────────
 class _AnswerTile extends StatelessWidget {
   const _AnswerTile({
     required this.label,
@@ -484,7 +423,6 @@ class _AnswerTile extends StatelessWidget {
     required this.primary,
     required this.onTap,
   });
-
   final String label;
   final int index;
   final int? selected;
@@ -498,26 +436,26 @@ class _AnswerTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     Color bg = Colors.white;
-    Color border = _C.border;
-    Color textColor = _C.dark;
-    Color letterBg = _C.inputBg;
-    Color letterColor = _C.muted;
+    Color border = const Color(0xFFE2E8F0);
+    Color textColor = const Color(0xFF0F172A);
+    Color letterBg = const Color(0xFFF1F5F9);
+    Color letterColor = const Color(0xFF94A3B8);
     IconData? trailingIcon;
 
     if (answered) {
       if (index == correctIndex) {
         bg = const Color(0xFFDCFCE7);
-        border = _C.green;
+        border = const Color(0xFF059669);
         textColor = const Color(0xFF065F46);
-        letterBg = _C.green.withOpacity(0.15);
-        letterColor = _C.green;
+        letterBg = const Color(0xFF059669).withOpacity(0.15);
+        letterColor = const Color(0xFF059669);
         trailingIcon = Icons.check_circle_rounded;
       } else if (index == selected) {
         bg = const Color(0xFFFEE2E2);
-        border = _C.red;
+        border = const Color(0xFFDC2626);
         textColor = const Color(0xFF991B1B);
-        letterBg = _C.red.withOpacity(0.15);
-        letterColor = _C.red;
+        letterBg = const Color(0xFFDC2626).withOpacity(0.15);
+        letterColor = const Color(0xFFDC2626);
         trailingIcon = Icons.cancel_rounded;
       }
     } else if (index == selected) {
@@ -539,50 +477,44 @@ class _AnswerTile extends StatelessWidget {
           border: Border.all(color: border, width: 1.5),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.04),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            ),
+                color: Colors.black.withOpacity(0.04),
+                blurRadius: 8,
+                offset: const Offset(0, 2)),
           ],
         ),
-        child: Row(
-          children: [
-            AnimatedContainer(
-              duration: const Duration(milliseconds: 200),
-              width: 30,
-              height: 30,
-              decoration: BoxDecoration(
-                color: letterBg,
-                shape: BoxShape.circle,
-                border: Border.all(color: border.withOpacity(0.3), width: 1),
-              ),
-              child: Center(
-                child: Text(
-                  _letters[index.clamp(0, 3)],
-                  style: TextStyle(
+        child: Row(children: [
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            width: 30,
+            height: 30,
+            decoration: BoxDecoration(
+              color: letterBg,
+              shape: BoxShape.circle,
+              border: Border.all(color: border.withOpacity(0.3), width: 1),
+            ),
+            child: Center(
+              child: Text(
+                _letters[index.clamp(0, 3)],
+                style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w800,
-                    color: letterColor,
-                  ),
-                ),
+                    color: letterColor),
               ),
             ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                label,
-                style: TextStyle(
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              label,
+              style: TextStyle(
                   fontSize: 14.5,
                   fontWeight: FontWeight.w600,
                   color: textColor,
-                  height: 1.3,
-                ),
-              ),
+                  height: 1.3),
             ),
-            if (trailingIcon != null)
-              Icon(trailingIcon, size: 20, color: border),
-          ],
-        ),
+          ),
+          if (trailingIcon != null) Icon(trailingIcon, size: 20, color: border),
+        ]),
       ),
     );
   }

@@ -21,19 +21,21 @@ class QuizQuestion {
     this.color,
   });
 
+  // ─── FROM JSON ──────────────────────────────────────────
   factory QuizQuestion.fromJson(Map<String, dynamic> json) {
     return QuizQuestion(
       id: json['id'] as String?,
       question: json['question'] as String,
-      options: List<String>.from(json['options'] as List),
-      correctIndex: json['correctIndex'] as int,
+      options: List<String>.from(json['options'] ?? []),
+      correctIndex: json['correctIndex'] as int? ?? 0,
       explanation: json['explanation'] as String?,
       category: json['category'] as String?,
       points: json['points'] as int?,
-      color: json['color'] != null ? Color(json['color']) : null,
+      color: json['color'] != null ? Color(json['color'] as int) : null,
     );
   }
 
+  // ─── TO JSON ──────────────────────────────────────────────
   Map<String, dynamic> toJson() {
     return {
       'id': id,
@@ -47,6 +49,7 @@ class QuizQuestion {
     };
   }
 
+  // ─── COPY WITH ─────────────────────────────────────────────
   QuizQuestion copyWith({
     String? id,
     String? question,

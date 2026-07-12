@@ -16,60 +16,37 @@ class KelolaSoalPage extends StatefulWidget {
 
 class _KelolaSoalPageState extends State<KelolaSoalPage> {
   // ─── State ──────────────────────────────────────────────
-  List<QuizQuestion> _questions = [];
   String _searchQuery = '';
-  bool _isLoading = true;
+  bool _isLoading = false;
 
-  // ─── Inisialisasi ────────────────────────────────────────
-  @override
-  void initState() {
-    super.initState();
-    _loadQuestions();
-  }
-
-  Future<void> _loadQuestions() async {
-    setState(() => _isLoading = true);
-    // PERBAIKAN 1: tambahkan await
-    final room = await RoomService.instance.findRoomConnected(widget.room.code);
-    if (room != null) {
-      setState(() {
-        _questions = List.from(room.questions);
-        _isLoading = false;
-      });
-    } else {
-      setState(() => _isLoading = false);
-    }
-  }
+  // ─── Getter untuk soal dari room (langsung dari cache) ──
+  List<QuizQuestion> get _questions => widget.room.questions;
 
   // ─── Group soal berdasarkan kategori ────────────────────
   Map<String, List<QuizQuestion>> get _groupedQuestions {
     final map = <String, List<QuizQuestion>>{};
-    for (var q in _questions) {
-      final cat = q.category ?? 'Umum'; // Ganti subject → category
+    final filtered = _searchQuery.isEmpty
+        ? _questions
+        : _questions.where((q) =>
+            q.question.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+            (q.category?.toLowerCase().contains(_searchQuery.toLowerCase()) ??
+                false));
+    for (var q in filtered) {
+      final cat = q.category ?? 'Umum';
       map.putIfAbsent(cat, () => []).add(q);
     }
     return map;
   }
 
-  List<String> get _categories =>
-      _groupedQuestions.keys.toList()..sort(); // ganti nama
+  List<String> get _categories => _groupedQuestions.keys.toList()..sort();
 
-  // ─── Filter berdasarkan pencarian ────────────────────────
-  List<QuizQuestion> get _filteredQuestions {
-    if (_searchQuery.isEmpty) return _questions;
-    return _questions
-        .where((q) =>
-                q.question.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-                (q.category
-                        ?.toLowerCase()
-                        .contains(_searchQuery.toLowerCase()) ??
-                    false) // Ganti subject → category
-            )
-        .toList();
+  // ─── Refresh UI ──────────────────────────────────────────
+  void _refresh() {
+    setState(() {});
   }
 
-  // ─── Tambah / Edit Soal ──────────────────────────────────
-  void _openQuestionForm({QuizQuestion? existingQuestion}) {
+  // ─── Tambah Soal ──────────────────────────────────────────
+  void _openAddQuestionForm() {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -77,8 +54,22 @@ class _KelolaSoalPageState extends State<KelolaSoalPage> {
       builder: (_) => _QuestionFormSheet(
         user: widget.user,
         room: widget.room,
-        existingQuestion: existingQuestion,
-        onSaved: _loadQuestions,
+        onSaved: _refresh,
+      ),
+    );
+  }
+
+  // ─── Edit Soal ──────────────────────────────────────────
+  void _openEditQuestionForm(QuizQuestion question) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _QuestionFormSheet(
+        user: widget.user,
+        room: widget.room,
+        existingQuestion: question,
+        onSaved: _refresh,
       ),
     );
   }
@@ -106,8 +97,31 @@ class _KelolaSoalPageState extends State<KelolaSoalPage> {
     if (confirm != true) return;
 
     final index = _questions.indexOf(question);
-    await RoomService.instance.removeQuestion(widget.room, index);
-    _loadQuestions();
+    if (index == -1) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+            content: Text('Soal tidak ditemukan'), backgroundColor: Colors.red),
+      );
+      return;
+    }
+
+    setState(() => _isLoading = true);
+    try {
+      await RoomService.instance.removeQuestion(widget.room, index);
+      _refresh();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+            content: Text('Soal berhasil dihapus'),
+            backgroundColor: Colors.green),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+            content: Text('Gagal menghapus: $e'), backgroundColor: Colors.red),
+      );
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
   }
 
   // ─── Import / Export ──────────────────────────────────────
@@ -135,7 +149,7 @@ class _KelolaSoalPageState extends State<KelolaSoalPage> {
         foregroundColor: const Color(0xFF0D9488),
         actions: [
           IconButton(
-            onPressed: _loadQuestions,
+            onPressed: _refresh,
             icon: const Icon(Icons.refresh_rounded),
             tooltip: 'Refresh',
           ),
@@ -185,7 +199,7 @@ class _KelolaSoalPageState extends State<KelolaSoalPage> {
           ),
           const SizedBox(width: 12),
           ElevatedButton.icon(
-            onPressed: () => _openQuestionForm(),
+            onPressed: _openAddQuestionForm,
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF0D9488),
               foregroundColor: Colors.white,
@@ -228,33 +242,25 @@ class _KelolaSoalPageState extends State<KelolaSoalPage> {
 
   // ─── Daftar Soal per Kategori ──────────────────────────
   Widget _buildQuestionList() {
-    final filtered = _filteredQuestions;
-    if (filtered.isEmpty && _searchQuery.isNotEmpty) {
+    final grouped = _groupedQuestions;
+    if (grouped.isEmpty && _searchQuery.isNotEmpty) {
       return const Center(
         child: Text('Tidak ada soal yang cocok',
             style: TextStyle(color: Color(0xFF94A3B8))),
       );
     }
 
-    final Map<String, List<QuizQuestion>> grouped = {};
-    for (var q in filtered) {
-      final cat = q.category ?? 'Umum'; // Ganti subject → category
-      grouped.putIfAbsent(cat, () => []).add(q);
-    }
-    final categories = grouped.keys.toList()..sort();
-
     return ListView.builder(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      itemCount: categories.length,
+      itemCount: _categories.length,
       itemBuilder: (context, index) {
-        final category = categories[index];
+        final category = _categories[index];
         final questions = grouped[category]!;
         return _CategoryCard(
-          // Ganti nama widget
           category: category,
-          questionCount: questions.length,
-          onEdit: () => _openQuestionForm(existingQuestion: questions.first),
-          onDelete: () => _deleteQuestion(questions.first),
+          questions: questions,
+          onEditQuestion: _openEditQuestionForm,
+          onDeleteQuestion: _deleteQuestion,
         );
       },
     );
@@ -306,17 +312,16 @@ class _KelolaSoalPageState extends State<KelolaSoalPage> {
 
 // ─── CARD PER KATEGORI ────────────────────────────────────
 class _CategoryCard extends StatelessWidget {
-  // Ganti nama dari _SubjectCard
   final String category;
-  final int questionCount;
-  final VoidCallback onEdit;
-  final VoidCallback onDelete;
+  final List<QuizQuestion> questions;
+  final void Function(QuizQuestion) onEditQuestion;
+  final void Function(QuizQuestion) onDeleteQuestion;
 
   const _CategoryCard({
     required this.category,
-    required this.questionCount,
-    required this.onEdit,
-    required this.onDelete,
+    required this.questions,
+    required this.onEditQuestion,
+    required this.onDeleteQuestion,
   });
 
   @override
@@ -367,7 +372,7 @@ class _CategoryCard extends StatelessWidget {
                       ),
                     ),
                     Text(
-                      '$questionCount Soal',
+                      '${questions.length} Soal',
                       style: const TextStyle(
                         fontSize: 13,
                         color: Color(0xFF64748B),
@@ -376,34 +381,110 @@ class _CategoryCard extends StatelessWidget {
                   ],
                 ),
               ),
-              Row(
-                children: [
-                  TextButton(
-                    onPressed: onEdit,
-                    style: TextButton.styleFrom(
-                      foregroundColor: const Color(0xFF0D9488),
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 12, vertical: 6),
-                      minimumSize: Size.zero,
-                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    ),
-                    child: const Text('Edit',
-                        style: TextStyle(fontWeight: FontWeight.w600)),
+            ],
+          ),
+          const SizedBox(height: 12),
+          ...questions.map((q) => _QuestionItem(
+                question: q,
+                onEdit: () => onEditQuestion(q),
+                onDelete: () => onDeleteQuestion(q),
+              )),
+        ],
+      ),
+    );
+  }
+}
+
+// ─── ITEM SOAL ──────────────────────────────────────────────
+class _QuestionItem extends StatelessWidget {
+  final QuizQuestion question;
+  final VoidCallback onEdit;
+  final VoidCallback onDelete;
+
+  const _QuestionItem({
+    required this.question,
+    required this.onEdit,
+    required this.onDelete,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: const Color(0xFFE2E8F0), width: 1),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  question.question,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF0F172A),
                   ),
-                  const SizedBox(width: 4),
-                  TextButton(
-                    onPressed: onDelete,
-                    style: TextButton.styleFrom(
-                      foregroundColor: Colors.red.shade600,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 2),
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 4,
+                  children: question.options.asMap().entries.map((entry) {
+                    final idx = entry.key;
+                    final text = entry.value;
+                    final isCorrect = idx == question.correctIndex;
+                    return Container(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 12, vertical: 6),
-                      minimumSize: Size.zero,
-                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    ),
-                    child: const Text('Hapus',
-                        style: TextStyle(fontWeight: FontWeight.w600)),
-                  ),
-                ],
+                          horizontal: 8, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: isCorrect
+                            ? Colors.green.shade100
+                            : Colors.grey.shade200,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Text(
+                        '${String.fromCharCode(65 + idx)}. $text',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight:
+                              isCorrect ? FontWeight.w700 : FontWeight.w400,
+                          color: isCorrect
+                              ? Colors.green.shade800
+                              : Colors.grey.shade700,
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                ),
+              ],
+            ),
+          ),
+          Row(
+            children: [
+              IconButton(
+                onPressed: onEdit,
+                icon: const Icon(Icons.edit_outlined, size: 18),
+                color: const Color(0xFF0D9488),
+                tooltip: 'Edit',
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
+              ),
+              const SizedBox(width: 4),
+              IconButton(
+                onPressed: onDelete,
+                icon: const Icon(Icons.delete_outline, size: 18),
+                color: Colors.red.shade600,
+                tooltip: 'Hapus',
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
               ),
             ],
           ),
@@ -437,8 +518,9 @@ class _QuestionFormSheetState extends State<_QuestionFormSheet> {
   final TextEditingController _optionBController = TextEditingController();
   final TextEditingController _optionCController = TextEditingController();
   final TextEditingController _optionDController = TextEditingController();
+  final TextEditingController _categoryController = TextEditingController();
   final TextEditingController _weightController =
-      TextEditingController(text: '5');
+      TextEditingController(text: '100');
 
   String _selectedCorrect = 'A';
   bool _isLoading = false;
@@ -457,7 +539,10 @@ class _QuestionFormSheetState extends State<_QuestionFormSheet> {
         _optionDController.text = q.options[3];
       }
       _selectedCorrect = _letters[q.correctIndex];
-      _weightController.text = '${q.points ?? 5}';
+      _categoryController.text = q.category ?? 'Umum';
+      _weightController.text = '${q.points ?? 100}';
+    } else {
+      _categoryController.text = 'Umum';
     }
   }
 
@@ -468,6 +553,7 @@ class _QuestionFormSheetState extends State<_QuestionFormSheet> {
     _optionBController.dispose();
     _optionCController.dispose();
     _optionDController.dispose();
+    _categoryController.dispose();
     _weightController.dispose();
     super.dispose();
   }
@@ -477,7 +563,8 @@ class _QuestionFormSheetState extends State<_QuestionFormSheet> {
         _optionAController.text.trim().isEmpty ||
         _optionBController.text.trim().isEmpty ||
         _optionCController.text.trim().isEmpty ||
-        _optionDController.text.trim().isEmpty) {
+        _optionDController.text.trim().isEmpty ||
+        _categoryController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Semua field wajib diisi!'),
@@ -500,8 +587,8 @@ class _QuestionFormSheetState extends State<_QuestionFormSheet> {
         _optionDController.text.trim(),
       ],
       correctIndex: _letters.indexOf(_selectedCorrect),
-      points: int.tryParse(_weightController.text) ?? 5,
-      category: widget.room.title, // PERBAIKAN 2: ganti subject → category
+      points: int.tryParse(_weightController.text) ?? 100,
+      category: _categoryController.text.trim(),
     );
 
     try {
@@ -513,6 +600,12 @@ class _QuestionFormSheetState extends State<_QuestionFormSheet> {
       }
       widget.onSaved();
       Navigator.pop(context);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Soal berhasil disimpan'),
+          backgroundColor: Colors.green,
+        ),
+      );
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -602,6 +695,15 @@ class _QuestionFormSheetState extends State<_QuestionFormSheet> {
                       labelText: 'Pilihan D',
                       border: OutlineInputBorder(),
                       prefixIcon: Icon(Icons.looks_4_rounded),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: _categoryController,
+                    decoration: const InputDecoration(
+                      labelText: 'Kategori (contoh: Matematika, IPA, dll)',
+                      border: OutlineInputBorder(),
+                      prefixIcon: Icon(Icons.category_rounded),
                     ),
                   ),
                   const SizedBox(height: 12),

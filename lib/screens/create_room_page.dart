@@ -1,10 +1,10 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import '../models/app_user.dart';
-import '../models/quiz_room.dart'; // <-- untuk QuizPhase dan QuizRoom
-import '../models/participant.dart'; // <-- untuk Participant
+import '../models/quiz_room.dart';
+import '../models/participant.dart';
 import '../services/room_service.dart';
-import 'quiz_live_page.dart'; // atau leaderboard_page.dart sesuai kebutuhan
+import 'quiz_live_page.dart';
 
 class CreateRoomPage extends StatefulWidget {
   const CreateRoomPage({super.key, required this.user});
@@ -15,7 +15,6 @@ class CreateRoomPage extends StatefulWidget {
 }
 
 class _CreateRoomPageState extends State<CreateRoomPage> {
-  // ─── Form controllers ──────────────────────────────────────
   final TextEditingController _titleController = TextEditingController();
   final TextEditingController _subjectController = TextEditingController();
   final TextEditingController _classController = TextEditingController();
@@ -24,7 +23,7 @@ class _CreateRoomPageState extends State<CreateRoomPage> {
   final TextEditingController _durationController =
       TextEditingController(text: '30');
 
-  String _mode = 'Live Quiz'; // 'Live Quiz' atau 'Homework'
+  String _mode = 'Live Quiz';
   bool _shuffleQuestions = true;
   bool _shuffleAnswers = true;
   bool _allowLateJoin = true;
@@ -34,7 +33,6 @@ class _CreateRoomPageState extends State<CreateRoomPage> {
   bool _isLoading = true;
   Timer? _refreshTimer;
 
-  // ─── Inisialisasi: buat room otomatis ─────────────────────
   @override
   void initState() {
     super.initState();
@@ -47,6 +45,8 @@ class _CreateRoomPageState extends State<CreateRoomPage> {
         title: 'Kuis EduQuiz',
         hostName: widget.user.name,
       );
+      await RoomService.instance
+          .addParticipant(room: room, name: widget.user.name);
       if (mounted) {
         setState(() {
           _room = room;
@@ -54,7 +54,6 @@ class _CreateRoomPageState extends State<CreateRoomPage> {
           _participants = List.from(room.participants);
           _isLoading = false;
         });
-        // ─── Polling peserta setiap 3 detik ───
         _refreshTimer =
             Timer.periodic(const Duration(seconds: 3), (timer) async {
           if (mounted && _room != null) {
@@ -91,12 +90,10 @@ class _CreateRoomPageState extends State<CreateRoomPage> {
     super.dispose();
   }
 
-  // ─── Mulai Quiz ────────────────────────────────────────────
   Future<void> _startQuiz() async {
     if (_room == null) return;
     await RoomService.instance.startQuiz(_room!);
     if (mounted) {
-      // Arahkan ke halaman quiz live
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
@@ -106,15 +103,11 @@ class _CreateRoomPageState extends State<CreateRoomPage> {
     }
   }
 
-  // ─── Build UI ─────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
-
     if (_room == null) {
       return Scaffold(
         appBar: AppBar(title: const Text('Buat Room')),
@@ -137,23 +130,14 @@ class _CreateRoomPageState extends State<CreateRoomPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // ─── FORM ─────────────────────────────────────
               _buildForm(),
               const SizedBox(height: 24),
-
-              // ─── KODE ROOM ───────────────────────────────
               _buildRoomCode(),
               const SizedBox(height: 16),
-
-              // ─── STATUS & PESERTA ──────────────────────
               _buildStatusAndParticipants(),
               const SizedBox(height: 24),
-
-              // ─── TOMBOL MULAI ──────────────────────────
               _buildStartButton(),
               const SizedBox(height: 12),
-
-              // ─── DAFTAR PESERTA ────────────────────────
               _buildParticipantList(),
             ],
           ),
@@ -162,7 +146,6 @@ class _CreateRoomPageState extends State<CreateRoomPage> {
     );
   }
 
-  // ─── FORM WIDGET ──────────────────────────────────────────
   Widget _buildForm() {
     return Container(
       padding: const EdgeInsets.all(16),
@@ -171,10 +154,9 @@ class _CreateRoomPageState extends State<CreateRoomPage> {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 4)),
         ],
       ),
       child: Column(
@@ -182,28 +164,25 @@ class _CreateRoomPageState extends State<CreateRoomPage> {
           TextField(
             controller: _titleController,
             decoration: const InputDecoration(
-              labelText: 'Judul Quiz',
-              border: OutlineInputBorder(),
-              prefixIcon: Icon(Icons.title),
-            ),
+                labelText: 'Judul Quiz',
+                border: OutlineInputBorder(),
+                prefixIcon: Icon(Icons.title)),
           ),
           const SizedBox(height: 12),
           TextField(
             controller: _subjectController,
             decoration: const InputDecoration(
-              labelText: 'Mata Pelajaran',
-              border: OutlineInputBorder(),
-              prefixIcon: Icon(Icons.book),
-            ),
+                labelText: 'Mata Pelajaran',
+                border: OutlineInputBorder(),
+                prefixIcon: Icon(Icons.book)),
           ),
           const SizedBox(height: 12),
           TextField(
             controller: _classController,
             decoration: const InputDecoration(
-              labelText: 'Kelas',
-              border: OutlineInputBorder(),
-              prefixIcon: Icon(Icons.class_),
-            ),
+                labelText: 'Kelas',
+                border: OutlineInputBorder(),
+                prefixIcon: Icon(Icons.class_)),
           ),
           const SizedBox(height: 12),
           Row(
@@ -213,10 +192,9 @@ class _CreateRoomPageState extends State<CreateRoomPage> {
                   controller: _questionCountController,
                   keyboardType: TextInputType.number,
                   decoration: const InputDecoration(
-                    labelText: 'Jumlah Soal',
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.numbers),
-                  ),
+                      labelText: 'Jumlah Soal',
+                      border: OutlineInputBorder(),
+                      prefixIcon: Icon(Icons.numbers)),
                 ),
               ),
               const SizedBox(width: 12),
@@ -225,16 +203,14 @@ class _CreateRoomPageState extends State<CreateRoomPage> {
                   controller: _durationController,
                   keyboardType: TextInputType.number,
                   decoration: const InputDecoration(
-                    labelText: 'Durasi (menit)',
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.timer),
-                  ),
+                      labelText: 'Durasi (menit)',
+                      border: OutlineInputBorder(),
+                      prefixIcon: Icon(Icons.timer)),
                 ),
               ),
             ],
           ),
           const SizedBox(height: 12),
-          // Mode
           Row(
             children: [
               const Text('Mode :',
@@ -266,7 +242,6 @@ class _CreateRoomPageState extends State<CreateRoomPage> {
             ],
           ),
           const SizedBox(height: 8),
-          // Checkbox acak
           Row(
             children: [
               Checkbox(
@@ -296,7 +271,6 @@ class _CreateRoomPageState extends State<CreateRoomPage> {
     );
   }
 
-  // ─── KODE ROOM ────────────────────────────────────────────
   Widget _buildRoomCode() {
     return Container(
       padding: const EdgeInsets.all(16),
@@ -308,199 +282,119 @@ class _CreateRoomPageState extends State<CreateRoomPage> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          const Text(
-            'Kode Room',
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-              color: Color(0xFF0D9488),
-            ),
-          ),
-          Text(
-            _room!.code,
-            style: const TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.w900,
-              color: Color(0xFF0D9488),
-              letterSpacing: 2,
-            ),
-          ),
+          const Text('Kode Room',
+              style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF0D9488))),
+          Text(_room!.code,
+              style: const TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.w900,
+                  color: Color(0xFF0D9488),
+                  letterSpacing: 2)),
         ],
       ),
     );
   }
 
-  // ─── STATUS & PESERTA (header) ──────────────────────────
-  // STATUS & PESERTA (header)
   Widget _buildStatusAndParticipants() {
     final status = _room!.phase == QuizPhase.lobby
         ? 'Belum Dimulai'
         : _room!.phase == QuizPhase.live
             ? 'Sedang Berlangsung'
             : 'Selesai';
-
     final statusColor = _room!.phase == QuizPhase.lobby
         ? Colors.orange
         : _room!.phase == QuizPhase.live
             ? Colors.green
             : Colors.grey;
-
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
+          color: Colors.white, borderRadius: BorderRadius.circular(12)),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Row(
-            children: [
-              Icon(Icons.person_outline, color: Colors.grey.shade600),
-              const SizedBox(width: 6),
-              Text(
-                'Peserta : ${_participants.length}',
-                style: const TextStyle(fontWeight: FontWeight.w700),
-              ),
-            ],
-          ),
-          Row(
-            children: [
-              Container(
+          Row(children: [
+            Icon(Icons.person_outline, color: Colors.grey.shade600),
+            const SizedBox(width: 6),
+            Text('Peserta : ${_participants.length}',
+                style: const TextStyle(fontWeight: FontWeight.w700)),
+          ]),
+          Row(children: [
+            Container(
                 width: 10,
                 height: 10,
-                decoration: BoxDecoration(
-                  color: statusColor,
-                  shape: BoxShape.circle,
-                ),
-              ),
-              const SizedBox(width: 6),
-              Text(
-                status,
-                style: TextStyle(
-                  fontWeight: FontWeight.w600,
-                  color: statusColor,
-                ),
-              ),
-            ],
-          ),
+                decoration:
+                    BoxDecoration(color: statusColor, shape: BoxShape.circle)),
+            const SizedBox(width: 6),
+            Text(status,
+                style:
+                    TextStyle(fontWeight: FontWeight.w600, color: statusColor)),
+          ]),
         ],
       ),
     );
   }
 
-  // ─── TOMBOL MULAI QUIZ ──────────────────────────────────
   Widget _buildStartButton() {
     return SizedBox(
       height: 52,
       child: ElevatedButton(
-        onPressed: _participants.isEmpty ? null : _startQuiz,
+        onPressed: _startQuiz,
         style: ElevatedButton.styleFrom(
           backgroundColor: const Color(0xFF0D9488),
           foregroundColor: Colors.white,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(14),
-          ),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
           elevation: 4,
-          disabledBackgroundColor: Colors.grey.shade300,
         ),
-        child: const Text(
-          'MULAI QUIZ',
-          style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.w800,
-            letterSpacing: 1,
-          ),
-        ),
+        child: const Text('MULAI QUIZ',
+            style: TextStyle(
+                fontSize: 18, fontWeight: FontWeight.w800, letterSpacing: 1)),
       ),
     );
   }
 
-  // ─── DAFTAR PESERTA ──────────────────────────────────────
   Widget _buildParticipantList() {
     if (_participants.isEmpty) {
       return Container(
         padding: const EdgeInsets.all(24),
         decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.04),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
+            color: Colors.white, borderRadius: BorderRadius.circular(12)),
         child: const Center(
-          child: Text(
-            'Belum ada peserta yang bergabung',
-            style: TextStyle(color: Colors.grey),
-          ),
-        ),
+            child: Text('Belum ada peserta yang bergabung',
+                style: TextStyle(color: Colors.grey))),
       );
     }
-
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
+          color: Colors.white, borderRadius: BorderRadius.circular(12)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Peserta yang sudah bergabung',
-            style: TextStyle(
-              fontSize: 15,
-              fontWeight: FontWeight.w700,
-              color: Color(0xFF0D9488),
-            ),
-          ),
+          const Text('Peserta yang sudah bergabung',
+              style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFF0D9488))),
           const SizedBox(height: 8),
-          ..._participants.asMap().entries.map(
-                (entry) => Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 4),
-                  child: Row(
-                    children: [
-                      Text(
-                        '${entry.key + 1}. ',
-                        style: const TextStyle(fontWeight: FontWeight.w600),
-                      ),
-                      Text(entry.value.name),
-                    ],
-                  ),
-                ),
-              ),
+          ..._participants.asMap().entries.map((entry) => Padding(
+                padding: const EdgeInsets.symmetric(vertical: 4),
+                child: Row(children: [
+                  Text('${entry.key + 1}. ',
+                      style: const TextStyle(fontWeight: FontWeight.w600)),
+                  Text(entry.value.name),
+                ]),
+              )),
           const Divider(height: 24),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text(
-                'Total',
-                style: TextStyle(fontWeight: FontWeight.w600),
-              ),
-              Text(
-                '${_participants.length} Peserta',
-                style: const TextStyle(fontWeight: FontWeight.w700),
-              ),
-            ],
-          ),
+          Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+            const Text('Total', style: TextStyle(fontWeight: FontWeight.w600)),
+            Text('${_participants.length} Peserta',
+                style: const TextStyle(fontWeight: FontWeight.w700)),
+          ]),
         ],
       ),
     );
