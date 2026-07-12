@@ -3,9 +3,9 @@ class SupabaseConfig {
 
   static const String url = 'https://kuubwgcedzhetxowbpmu.supabase.co';
 
-  static const String anonKey =
+  static const String publishableKey =
       'sb_publishable_QohMi69PpUtiLgNJakAE-g_wLrVzc2B';
 
   static bool get isConfigured =>
-      url.startsWith('https://') && anonKey.isNotEmpty;
+      url.startsWith('https://') && publishableKey.isNotEmpty;
 }

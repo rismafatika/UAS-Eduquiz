@@ -24,25 +24,7 @@ class SupabaseService {
   }
 
   Future<void> initialize() async {
-    if (!SupabaseConfig.isConfigured) {
-      _ready = false;
-      return;
-    }
-
-    try {
-      await Supabase.initialize(
-        url: SupabaseConfig.url,
-        publishableKey: SupabaseConfig.anonKey,
-      );
-      _ready = true;
-    } catch (_) {
-      _ready = false;
-    }
-  }
-
-  Future<void> signOut() async {
-    if (!_ready) return;
-    await Supabase.instance.client.auth.signOut();
+    _ready = SupabaseConfig.isConfigured;
   }
 
   Future<void> saveUser(AppUser user) async {
@@ -58,6 +40,32 @@ class SupabaseService {
       }, onConflict: 'email');
     } catch (_) {
       return;
+    }
+  }
+
+  Future<AppUser?> findUserByEmail(String email) async {
+    final client = _client;
+    if (client == null || email.isEmpty) return null;
+
+    try {
+      final row = await client
+          .from('app_users')
+          .select()
+          .eq('email', email)
+          .maybeSingle();
+      if (row == null) return null;
+
+      final roleName = row['role'] as String? ?? UserRole.participant.name;
+      return AppUser(
+        email: row['email'] as String? ?? email,
+        name: row['name'] as String? ?? email.split('@').first,
+        role: UserRole.values.firstWhere(
+          (role) => role.name == roleName,
+          orElse: () => UserRole.participant,
+        ),
+      );
+    } catch (_) {
+      return null;
     }
   }
 
@@ -103,7 +111,11 @@ class SupabaseService {
     if (client == null) return null;
 
     try {
-      final roomData = await client.from('rooms').select().eq('code', code).maybeSingle();
+      final roomData = await client
+          .from('rooms')
+          .select()
+          .eq('code', code)
+          .maybeSingle();
       if (roomData == null) return null;
 
       final room = QuizRoom(
@@ -120,7 +132,10 @@ class SupabaseService {
       );
       room.currentQuestionIndex = roomData['current_question_index'] as int? ?? 0;
 
-      final participantRows = await client.from('participants').select().eq('room_code', room.code);
+      final participantRows = await client
+          .from('participants')
+          .select()
+          .eq('room_code', room.code);
       for (final row in participantRows) {
         room.participants.add(
           Participant(
@@ -188,18 +203,15 @@ class SupabaseService {
     if (client == null) return;
 
     try {
-      await client.from('questions').delete().eq('room_code', room.code);
-      await client.from('questions').insert(
+      await client.from('room_questions').delete().eq('room_code', room.code);
+      await client.from('room_questions').insert(
             room.questions.asMap().entries.map((entry) {
               final question = entry.value;
               return {
                 'room_code': room.code,
-                'question_index': entry.key,
-                'question_text': question.question,
-                'option_a': question.options[0],
-                'option_b': question.options[1],
-                'option_c': question.options[2],
-                'option_d': question.options[3],
+                'sort_order': entry.key,
+                'question': question.question,
+                'options': question.options,
                 'correct_index': question.correctIndex,
                 'explanation': question.explanation,
                 'category': question.category,
@@ -236,20 +248,28 @@ class SupabaseService {
     }
   }
 
-  Future<List<QuizQuestion>> _loadQuestions(SupabaseClient client, String roomCode) async {
+  Future<List<QuizQuestion>> _loadQuestions(
+    SupabaseClient client,
+    String roomCode,
+  ) async {
     try {
-      final rows = await client.from('questions').select().eq('room_code', roomCode).order('question_index');
+      final rows = await client
+          .from('room_questions')
+          .select()
+          .eq('room_code', roomCode)
+          .order('sort_order');
       if (rows.isEmpty) return List.of(sampleQuestions);
 
       return rows.map<QuizQuestion>((row) {
+        final options = (row['options'] as List<dynamic>? ?? const [])
+            .map((option) => option.toString())
+            .toList();
+
         return QuizQuestion(
-          question: row['question_text'] as String,
-          options: [
-            row['option_a'] as String,
-            row['option_b'] as String,
-            row['option_c'] as String,
-            row['option_d'] as String,
-          ],
+          question: row['question'] as String,
+          options: options.length == 4
+              ? options
+              : ['A', 'B', 'C', 'D'],
           correctIndex: row['correct_index'] as int? ?? 0,
           explanation: row['explanation'] as String? ?? '',
           category: row['category'] as String? ?? 'Umum',

@@ -1,6 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../models/app_user.dart';
+import '../services/auth_service.dart';
+import '../services/supabase_service.dart';
+import 'email_otp_verification_page.dart';
+
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});
 
@@ -21,23 +26,45 @@ class _RegisterPageState extends State<RegisterPage> {
     });
 
     try {
-      final auth = Supabase.instance.client.auth;
-
-      await auth.signUp(
+      final response = await AuthService.instance.signUp(
+        name: _nameController.text.trim(),
         email: _emailController.text.trim(),
         password: _passwordController.text.trim(),
-        data: {
-          'name': _nameController.text.trim(),
-        },
+        role: UserRole.participant,
       );
+
+      if (response.session != null) {
+        await SupabaseService.instance.saveUser(
+          AppUser(
+            uid: response.user?.id,
+            name: _nameController.text.trim(),
+            email: _emailController.text.trim(),
+            role: UserRole.participant,
+          ),
+        );
+      }
 
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text("Registrasi berhasil"),
+          SnackBar(
+            content: Text(
+              response.session == null
+                  ? "Registrasi berhasil. Cek email untuk verifikasi."
+                  : "Registrasi berhasil.",
+            ),
           ),
         );
 
+        if (response.session == null) {
+          await Navigator.of(context).push(
+            MaterialPageRoute<void>(
+              builder: (_) => EmailOtpVerificationPage(
+                email: _emailController.text.trim(),
+              ),
+            ),
+          );
+        }
+        if (!context.mounted) return;
         Navigator.pop(context);
       }
     } on AuthException catch (e) {
@@ -46,9 +73,11 @@ class _RegisterPageState extends State<RegisterPage> {
       );
     }
 
-    setState(() {
-      loading = false;
-    });
+    if (mounted) {
+      setState(() {
+        loading = false;
+      });
+    }
   }
 
   @override

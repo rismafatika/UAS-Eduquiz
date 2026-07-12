@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../services/auth_service.dart';
+
 class ForgotPasswordPage extends StatefulWidget {
   const ForgotPasswordPage({super.key});
 
@@ -13,7 +15,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
 
   Future<void> sendReset() async {
     try {
-      await Supabase.instance.client.auth.resetPasswordForEmail(
+      await AuthService.instance.resetPasswordForEmail(
         emailController.text.trim(),
       );
 

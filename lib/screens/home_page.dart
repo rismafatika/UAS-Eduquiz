@@ -8,6 +8,7 @@ import '../widgets/section_title.dart';
 import '../widgets/status_badge.dart';
 import 'create_room_page.dart';
 import 'join_room_page.dart';
+import 'logout_page.dart';
 
 class HomePage extends StatelessWidget {
   const HomePage({super.key, required this.user});
@@ -23,11 +24,22 @@ class HomePage extends StatelessWidget {
         title: const Text('EduQuiz'),
         actions: [
           Padding(
-            padding: const EdgeInsets.only(right: 16),
+            padding: const EdgeInsets.only(right: 8),
             child: Center(
               child: Text(user.name, style: const TextStyle(fontWeight: FontWeight.w800)),
             ),
           ),
+          IconButton(
+            tooltip: 'Logout',
+            onPressed: () {
+              showDialog<void>(
+                context: context,
+                builder: (_) => const LogoutPage(),
+              );
+            },
+            icon: const Icon(Icons.logout_rounded),
+          ),
+          const SizedBox(width: 8),
         ],
       ),
       body: ProPage(

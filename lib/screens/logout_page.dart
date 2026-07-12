@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'login_page.dart';
+
+import '../services/auth_service.dart';
 
 class LogoutPage extends StatelessWidget {
   const LogoutPage({super.key});
@@ -16,15 +17,12 @@ class LogoutPage extends StatelessWidget {
           onPressed: () => Navigator.pop(context),
           child: const Text('Batal'),
         ),
-        ElevatedButton(
-          onPressed: () {
-            Navigator.pushAndRemoveUntil(
-              context,
-              MaterialPageRoute(
-                builder: (_) => const LoginPage(),
-              ),
-              (route) => false,
-            );
+        FilledButton(
+          onPressed: () async {
+            await AuthService.instance.signOut();
+            if (context.mounted) {
+              Navigator.pop(context);
+            }
           },
           child: const Text('Logout'),
         ),

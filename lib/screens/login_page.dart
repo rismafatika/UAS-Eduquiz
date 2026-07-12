@@ -1,9 +1,10 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import '../models/app_user.dart';
+import '../services/auth_service.dart';
 import '../services/supabase_service.dart';
-import 'home_page.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'email_otp_verification_page.dart';
 
 // ─────────────────────────────────────────────────────────────
 // WARNA TEMA
@@ -100,7 +101,7 @@ class _LoginPageState extends State<LoginPage> {
     setState(() => _isLoading = true);
 
     try {
-      final res = await Supabase.instance.client.auth.signInWithPassword(
+      final res = await AuthService.instance.signIn(
         email: email,
         password: password,
       );
@@ -116,11 +117,16 @@ class _LoginPageState extends State<LoginPage> {
       final roleStr = meta['role'] as String? ?? 'participant';
       final role = roleStr == 'host' ? UserRole.host : UserRole.participant;
 
-      final user = AppUser(name: name, email: email, role: role);
+      final user = AppUser(
+        uid: supaUser.id,
+        name: name,
+        email: email,
+        role: role,
+      );
       unawaited(SupabaseService.instance.saveUser(user));
 
       if (!mounted) return;
-      _navigateHome(user);
+      _showSnack('Login berhasil.', isError: false);
     } on AuthException catch (e) {
       if (!mounted) return;
       _showSnack(_authErrorMsg(e.message), isError: true);
@@ -159,29 +165,32 @@ class _LoginPageState extends State<LoginPage> {
     setState(() => _isLoading = true);
 
     try {
-      final res = await Supabase.instance.client.auth.signUp(
+      final res = await AuthService.instance.signUp(
+        name: name,
         email: email,
         password: password,
-        data: {
-          'full_name': name,
-          'role': _role == UserRole.host ? 'host' : 'participant',
-        },
+        role: _role,
       );
 
       if (!mounted) return;
 
       if (res.user != null && res.session == null) {
-        // Email konfirmasi dikirim
-        _showSnack(
-          'Akun berhasil dibuat! Cek email kamu untuk verifikasi.',
-          isError: false,
+        await Navigator.of(context).push(
+          MaterialPageRoute<void>(
+            builder: (_) => EmailOtpVerificationPage(email: email),
+          ),
         );
-        _switchMode(_FormMode.login);
+        if (mounted) _switchMode(_FormMode.login);
       } else if (res.session != null) {
         // Langsung masuk (email confirmation dimatikan di Supabase)
-        final user = AppUser(name: name, email: email, role: _role);
+        final user = AppUser(
+          uid: res.user?.id,
+          name: name,
+          email: email,
+          role: _role,
+        );
         unawaited(SupabaseService.instance.saveUser(user));
-        _navigateHome(user);
+        _showSnack('Akun berhasil dibuat.', isError: false);
       }
     } on AuthException catch (e) {
       if (!mounted) return;
@@ -204,7 +213,7 @@ class _LoginPageState extends State<LoginPage> {
 
     setState(() => _isLoading = true);
     try {
-      await Supabase.instance.client.auth.resetPasswordForEmail(email);
+      await AuthService.instance.resetPasswordForEmail(email);
       if (!mounted) return;
       _showSnack('Link reset password dikirim ke $email', isError: false);
     } on AuthException catch (e) {
@@ -213,19 +222,6 @@ class _LoginPageState extends State<LoginPage> {
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
-  }
-
-  void _navigateHome(AppUser user) {
-    Navigator.pushReplacement(
-      context,
-      PageRouteBuilder(
-        pageBuilder: (_, anim, __) => FadeTransition(
-          opacity: anim,
-          child: HomePage(user: user),
-        ),
-        transitionDuration: const Duration(milliseconds: 400),
-      ),
-    );
   }
 
   String _authErrorMsg(String msg) {
