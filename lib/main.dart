@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'screens/auth_gate.dart';
+import 'services/supabase_service.dart';
 import 'widgets/app_update_gate.dart';
 
 const String supabaseUrl = 'https://kuubwgcedzhetxowbpmu.supabase.co';
@@ -15,6 +16,7 @@ Future<void> main() async {
       url: supabaseUrl,
       anonKey: supabaseAnonKey,
     );
+    await SupabaseService.instance.initialize();
   } catch (e) {
     // Ignore startup failures so the app can still open in local mode.
     debugPrint('Supabase initialization failed: $e');

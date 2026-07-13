@@ -16,20 +16,45 @@ class RoomService {
   // ─── BUAT ROOM ──────────────────────────────────────────────
   Future<QuizRoom> createRoom(
       {required String title, required String hostName}) async {
-    final code = _generateCode();
-    final room = QuizRoom(
-      code: code,
-      title: title.trim().isEmpty ? 'Kuis EduQuiz' : title.trim(),
-      hostName: hostName,
-      questions: List.from(sampleQuestions),
-    );
-    _cache[code] = room;
-    try {
-      await _supabase.createRoom(room);
-    } catch (e) {
-      _logError('Supabase error (createRoom)', e);
+    final baseTitle = title.trim().isEmpty ? 'Kuis EduQuiz' : title.trim();
+
+    for (var attempt = 0; attempt < 5; attempt++) {
+      final room = QuizRoom(
+        code: _generateCode(),
+        title: baseTitle,
+        hostName: hostName,
+        questions: List.from(sampleQuestions),
+      );
+      room.phase = QuizPhase.waiting;
+      room.participants.add(Participant(name: hostName));
+
+      try {
+        await _supabase.createRoom(room);
+        _cache[room.code] = room;
+        try {
+          await _supabase.addParticipant(
+            room: room,
+            participant: Participant(name: hostName),
+          );
+        } catch (e) {
+          _logError('Host participant add skipped', e);
+        }
+        return room;
+      } catch (e) {
+        final errorText = e.toString().toLowerCase();
+        final duplicateRoom = errorText.contains('23505') ||
+            errorText.contains('duplicate key') ||
+            errorText.contains('unique constraint');
+        if (duplicateRoom && attempt < 4) {
+          debugPrint('Room code collision, retrying createRoom...');
+          continue;
+        }
+        _logError('Supabase error (createRoom)', e);
+        rethrow;
+      }
     }
-    return room;
+
+    throw StateError('Failed to create room after several attempts');
   }
 
   // ─── GET ALL ROOMS ──────────────────────────────────────────
@@ -52,17 +77,18 @@ class RoomService {
   // ─── FIND ROOM ──────────────────────────────────────────────
   Future<QuizRoom?> findRoomConnected(String code) async {
     final normalized = code.trim().toUpperCase();
-    if (_cache.containsKey(normalized)) {
-      return _cache[normalized];
-    }
     try {
       final room = await _supabase.findRoom(normalized);
-      if (room != null) _cache[room.code] = room;
-      return room;
+      if (room != null) {
+        _cache[room.code] = room;
+        return room;
+      }
     } catch (e) {
       _logError('Find room error', e);
-      return null;
+      rethrow;
     }
+
+    return null;
   }
 
   // ─── GET ROOM (SYNC) ────────────────────────────────────────
@@ -80,9 +106,10 @@ class RoomService {
     room.participants.add(participant);
     _cache[room.code] = room;
     try {
-      await _supabase.updateRoom(room);
+      await _supabase.addParticipant(room: room, participant: participant);
     } catch (e) {
       _logError('Add participant error', e);
+      rethrow;
     }
     return participant;
   }
@@ -97,10 +124,28 @@ class RoomService {
       await _supabase.updateRoom(room);
     } catch (e) {
       _logError('Start quiz error', e);
+      rethrow;
     }
   }
 
   // ─── ANSWER ─────────────────────────────────────────────────
+  Future<void> nextQuestion(QuizRoom room) async {
+    if (room.currentQuestionIndex >= room.questions.length - 1) {
+      room.phase = QuizPhase.leaderboard;
+    } else {
+      room.currentQuestionIndex++;
+      room.phase = QuizPhase.live;
+    }
+
+    _cache[room.code] = room;
+    try {
+      await _supabase.updateRoom(room);
+    } catch (e) {
+      _logError('Next question error', e);
+      rethrow;
+    }
+  }
+
   Future<void> answerQuestion({
     required QuizRoom room,
     required Participant participant,
@@ -124,18 +169,7 @@ class RoomService {
       );
     } catch (e) {
       _logError('Answer error', e);
-    }
-
-    if (questionIdx == room.questions.length - 1) {
-      room.phase = QuizPhase.leaderboard;
-    } else {
-      room.currentQuestionIndex++;
-    }
-    _cache[room.code] = room;
-    try {
-      await _supabase.updateRoom(room);
-    } catch (e) {
-      _logError('Update after answer error', e);
+      rethrow;
     }
   }
 
@@ -147,6 +181,7 @@ class RoomService {
       await _supabase.updateRoom(room);
     } catch (e) {
       _logError('Show leaderboard error', e);
+      rethrow;
     }
   }
 
@@ -157,6 +192,7 @@ class RoomService {
       await _supabase.updateRoom(room);
     } catch (e) {
       _logError('Show review error', e);
+      rethrow;
     }
   }
 
@@ -167,6 +203,7 @@ class RoomService {
       await _supabase.updateRoom(room);
     } catch (e) {
       _logError('Show dashboard error', e);
+      rethrow;
     }
   }
 
@@ -188,6 +225,7 @@ class RoomService {
       await _supabase.addQuestion(room, room.questions.length - 1, newQuestion);
     } catch (e) {
       _logError('Add question error', e);
+      rethrow;
     }
   }
 
@@ -211,6 +249,7 @@ class RoomService {
       await _supabase.addQuestion(room, index, updated);
     } catch (e) {
       _logError('Update question error', e);
+      rethrow;
     }
   }
 
@@ -223,6 +262,7 @@ class RoomService {
       await _supabase.deleteQuestion(room, oldId);
     } catch (e) {
       _logError('Delete question error', e);
+      rethrow;
     }
   }
 

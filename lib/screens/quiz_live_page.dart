@@ -1,8 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import '../models/app_user.dart';
 import '../models/participant.dart';
 import '../models/quiz_room.dart';
 import '../services/room_service.dart';
+import '../services/supabase_service.dart';
 import 'leaderboard_page.dart';
 
 class QuizLivePage extends StatefulWidget {
@@ -17,6 +20,7 @@ class QuizLivePage extends StatefulWidget {
 class _QuizLivePageState extends State<QuizLivePage>
     with SingleTickerProviderStateMixin {
   late final AnimationController _pulseCtrl;
+  Timer? _refreshTimer;
   int? _selectedAnswer;
   bool _answered = false;
   Participant? _participant;
@@ -33,6 +37,46 @@ class _QuizLivePageState extends State<QuizLivePage>
         AnimationController(vsync: this, duration: const Duration(seconds: 1))
           ..repeat(reverse: true);
     _initParticipant();
+    SupabaseService.instance.subscribeRoom(widget.room.code, () {
+      unawaited(_syncRoom());
+    });
+    _refreshTimer = Timer.periodic(const Duration(seconds: 2), (_) {
+      unawaited(_syncRoom());
+    });
+  }
+
+  Future<void> _syncRoom() async {
+    try {
+      final previousQuestionIndex = widget.room.currentQuestionIndex;
+      final updated =
+          await RoomService.instance.findRoomConnected(widget.room.code);
+      if (!mounted || updated == null) {
+        return;
+      }
+      final questionChanged =
+          updated.currentQuestionIndex != previousQuestionIndex;
+
+      setState(() {
+        widget.room.phase = updated.phase;
+        widget.room.currentQuestionIndex = updated.currentQuestionIndex;
+        widget.room.participants
+          ..clear()
+          ..addAll(updated.participants);
+      });
+
+      if (questionChanged && !_isHost) {
+        setState(() {
+          _selectedAnswer = null;
+          _answered = false;
+        });
+      }
+
+      if (widget.room.phase == QuizPhase.leaderboard) {
+        _goLeaderboard();
+      }
+    } catch (e) {
+      debugPrint('Quiz sync failed: $e');
+    }
   }
 
   Future<void> _initParticipant() async {
@@ -50,7 +94,7 @@ class _QuizLivePageState extends State<QuizLivePage>
       }
     } catch (e) {
       // Jika gagal, tetap lanjut dengan participant dummy (tanpa score)
-      print('Participant init error: $e');
+      debugPrint('Participant init error: $e');
       if (mounted) {
         setState(() {
           // Buat participant lokal agar tetap bisa jalan
@@ -63,22 +107,27 @@ class _QuizLivePageState extends State<QuizLivePage>
 
   @override
   void dispose() {
+    _refreshTimer?.cancel();
     _pulseCtrl.dispose();
     super.dispose();
   }
 
-  void _answer(int index) {
+  Future<void> _answer(int index) async {
     if (_answered || _isHost || _participant == null) return;
     setState(() {
       _selectedAnswer = index;
       _answered = true;
     });
 
-    RoomService.instance.answerQuestion(
-      room: widget.room,
-      participant: _participant!,
-      answerIndex: index,
-    );
+    try {
+      await RoomService.instance.answerQuestion(
+        room: widget.room,
+        participant: _participant!,
+        answerIndex: index,
+      );
+    } catch (e) {
+      debugPrint('Answer submit failed: $e');
+    }
 
     Future.delayed(const Duration(milliseconds: 800), () {
       if (mounted) {
@@ -90,9 +139,16 @@ class _QuizLivePageState extends State<QuizLivePage>
     });
   }
 
-  void _finishFromHost() {
-    RoomService.instance.showLeaderboard(widget.room);
-    _goLeaderboard();
+  Future<void> _finishFromHost() async {
+    await RoomService.instance.nextQuestion(widget.room);
+    if (!mounted) {
+      return;
+    }
+
+    setState(() {});
+    if (widget.room.phase == QuizPhase.leaderboard) {
+      _goLeaderboard();
+    }
   }
 
   void _goLeaderboard() {
@@ -154,7 +210,7 @@ class _QuizLivePageState extends State<QuizLivePage>
                             correctIndex: question.correctIndex,
                             isHost: _isHost,
                             primary: _primary,
-                            onTap: () => _answer(i),
+                            onTap: () => unawaited(_answer(i)),
                           ),
                         ),
                       ),
@@ -325,9 +381,12 @@ class _QuizLivePageState extends State<QuizLivePage>
                   borderRadius: BorderRadius.circular(14)),
             ),
             icon: const Icon(Icons.leaderboard_outlined, color: Colors.white),
-            label: const Text(
-              'Tampilkan Leaderboard',
-              style: TextStyle(
+            label: Text(
+              widget.room.currentQuestionIndex >=
+                      widget.room.questions.length - 1
+                  ? 'Tampilkan Leaderboard'
+                  : 'Soal Berikutnya',
+              style: const TextStyle(
                   color: Colors.white,
                   fontWeight: FontWeight.w700,
                   fontSize: 15),

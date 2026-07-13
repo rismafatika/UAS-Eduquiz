@@ -64,6 +64,7 @@ class _JoinRoomPageState extends State<JoinRoomPage> {
         ),
       );
     } catch (e) {
+      debugPrint('Join room failed: $e');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
             content: Text('Gagal bergabung: $e'), backgroundColor: Colors.red),

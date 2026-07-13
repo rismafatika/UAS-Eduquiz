@@ -30,10 +30,23 @@ class SupabaseService {
     _ready = true;
   }
 
+  void _logError(String context, Object error) {
+    debugPrint('$context: $error');
+  }
+
+  SupabaseClient _requireClient(String context) {
+    final client = _client;
+    if (client == null) {
+      final error = StateError('Supabase client is not initialized for $context');
+      _logError(context, error);
+      throw error;
+    }
+    return client;
+  }
+
   // ─── SAVE USER ──────────────────────────────────────────────
   Future<void> saveUser(AppUser user) async {
-    final client = _client;
-    if (client == null) return;
+    final client = _requireClient('saveUser');
 
     try {
       await client.from('app_users').upsert({
@@ -42,18 +55,18 @@ class SupabaseService {
         'role': user.role.name,
         'last_login_at': DateTime.now().toIso8601String(),
       }, onConflict: 'email');
-    } catch (_) {
-      return;
+    } catch (error) {
+      _logError('Supabase saveUser error', error);
+      rethrow;
     }
   }
 
   // ─── ROOM ────────────────────────────────────────────────────
   Future<void> createRoom(QuizRoom room) async {
-    final client = _client;
-    if (client == null) return;
+    final client = _requireClient('createRoom');
 
     try {
-      await client.from('rooms').upsert({
+      await client.from('rooms').insert({
         'code': room.code,
         'title': room.title,
         'host_name': room.hostName,
@@ -61,32 +74,28 @@ class SupabaseService {
         'current_question_index': room.currentQuestionIndex,
         'created_at': DateTime.now().toIso8601String(),
       });
-
-      for (final participant in room.participants) {
-        await addParticipant(room: room, participant: participant);
-      }
-    } catch (_) {
-      return;
+    } catch (error) {
+      _logError('Supabase createRoom error', error);
+      rethrow;
     }
   }
 
   Future<void> updateRoom(QuizRoom room) async {
-    final client = _client;
-    if (client == null) return;
+    final client = _requireClient('updateRoom');
 
     try {
       await client.from('rooms').update({
         'phase': room.phase.name,
         'current_question_index': room.currentQuestionIndex,
       }).eq('code', room.code);
-    } catch (_) {
-      return;
+    } catch (error) {
+      _logError('Supabase updateRoom error', error);
+      rethrow;
     }
   }
 
   Future<QuizRoom?> findRoom(String code) async {
-    final client = _client;
-    if (client == null) return null;
+    final client = _requireClient('findRoom');
 
     try {
       final roomData =
@@ -109,29 +118,59 @@ class SupabaseService {
       );
 
       room.currentQuestionIndex =
-          roomData['current_question_index'] as int? ?? 0;
+          (roomData['current_question_index'] as num?)?.toInt() ?? 0;
 
       final participantRows =
           await client.from('participants').select().eq('room_code', room.code);
+      final participantNames = <String>{
+        for (final row in participantRows) row['name'] as String,
+      };
+      final answerRows = await client.from('answers').select();
+
+      final scoreByParticipant = <String, int>{};
+      final answersByParticipant = <String, Map<int, int>>{};
+      for (final row in answerRows) {
+        final name = row['participant_name'] as String?;
+        if (name == null || !participantNames.contains(name)) continue;
+        final questionIndex = (row['question_index'] as num?)?.toInt() ?? 0;
+        if (questionIndex < 0 || questionIndex >= room.questions.length) {
+          continue;
+        }
+        final answerIndex = (row['answer_index'] as num?)?.toInt();
+        if (answerIndex == null) continue;
+
+        final question = room.questions[questionIndex];
+        final participantAnswers =
+            answersByParticipant[name] ?? <int, int>{};
+        participantAnswers[questionIndex] = answerIndex;
+        answersByParticipant[name] = participantAnswers;
+        if (answerIndex != question.correctIndex) continue;
+        final points = question.points ?? 100;
+        scoreByParticipant[name] = (scoreByParticipant[name] ?? 0) + points;
+      }
 
       for (final row in participantRows) {
+        final name = row['name'] as String;
         room.participants.add(
           Participant(
-            name: row['name'] as String,
-            score: row['score'] as int? ?? 0,
+            name: name,
+            score: scoreByParticipant[name] ??
+                (row['score'] as num?)?.toInt() ??
+                0,
+            answers: answersByParticipant[name],
           ),
         );
       }
 
       return room;
-    } catch (_) {
-      return null;
+    } catch (error) {
+      _logError('Supabase findRoom error', error);
+      rethrow;
     }
   }
 
   Future<List<QuizRoom>> getAllRooms() async {
-    final client = _client;
-    if (client == null) return [];
+    final client = _requireClient('getAllRooms');
 
     try {
       final roomRows = await client.from('rooms').select();
@@ -144,8 +183,9 @@ class SupabaseService {
       }
 
       return rooms;
-    } catch (_) {
-      return [];
+    } catch (error) {
+      _logError('Supabase getAllRooms error', error);
+      rethrow;
     }
   }
 
@@ -154,18 +194,31 @@ class SupabaseService {
     required QuizRoom room,
     required Participant participant,
   }) async {
-    final client = _client;
-    if (client == null) return;
+    final client = _requireClient('addParticipant');
 
     try {
-      await client.from('participants').upsert({
-        'room_code': room.code,
-        'name': participant.name,
-        'score': participant.score,
-        'joined_at': DateTime.now().toIso8601String(),
-      }, onConflict: 'room_code,name');
-    } catch (_) {
-      return;
+      final existing = await client
+          .from('participants')
+          .select('id')
+          .eq('room_code', room.code)
+          .eq('name', participant.name)
+          .maybeSingle();
+
+      if (existing == null) {
+        await client.from('participants').insert({
+          'room_code': room.code,
+          'name': participant.name,
+          'score': participant.score,
+          'joined_at': DateTime.now().toIso8601String(),
+        });
+      } else {
+        await client.from('participants').update({
+          'score': participant.score,
+        }).eq('id', existing['id']);
+      }
+    } catch (error) {
+      _logError('Supabase addParticipant error', error);
+      rethrow;
     }
   }
 
@@ -177,35 +230,58 @@ class SupabaseService {
     required int answerIndex,
     required bool isCorrect,
   }) async {
-    final client = _client;
-    if (client == null) return;
+    final client = _requireClient('submitAnswer');
 
     try {
-      await client.from('answers').upsert({
-        'room_code': room.code,
+      final answerRow = {
         'participant_name': participant.name,
         'question_index': questionIndex,
         'answer_index': answerIndex,
         'is_correct': isCorrect,
         'answered_at': DateTime.now().toIso8601String(),
-      }, onConflict: 'room_code,participant_name,question_index');
+      };
 
-      await client
+      final existingAnswer = await client
+          .from('answers')
+          .select('id')
+          .eq('participant_name', participant.name)
+          .eq('question_index', questionIndex)
+          .maybeSingle();
+
+      if (existingAnswer == null) {
+        await client.from('answers').insert(answerRow);
+      } else {
+        await client.from('answers').update(answerRow).eq('id', existingAnswer['id']);
+      }
+
+      final existingParticipant = await client
           .from('participants')
-          .update({
-            'score': participant.score,
-          })
+          .select('id')
           .eq('room_code', room.code)
-          .eq('name', participant.name);
-    } catch (_) {
-      return;
+          .eq('name', participant.name)
+          .maybeSingle();
+
+      if (existingParticipant == null) {
+        await client.from('participants').insert({
+          'room_code': room.code,
+          'name': participant.name,
+          'score': participant.score,
+          'joined_at': DateTime.now().toIso8601String(),
+        });
+      } else {
+        await client.from('participants').update({
+          'score': participant.score,
+        }).eq('id', existingParticipant['id']);
+      }
+    } catch (error) {
+      _logError('Supabase submitAnswer error', error);
+      rethrow;
     }
   }
 
   // ─── REALTIME SUBSCRIPTION (DIPERBAIKI) ────────────────────
   void subscribeRoom(String roomCode, VoidCallback onUpdate) {
-    final client = _client;
-    if (client == null) return;
+    final client = _requireClient('subscribeRoom');
 
     final channel = client.channel('room:$roomCode');
 
@@ -234,7 +310,7 @@ class SupabaseService {
         )
         .subscribe((status, error) {
       if (error != null) {
-        print('Error subscribing to room $roomCode: $error');
+        debugPrint('Error subscribing to room $roomCode: $error');
       }
     });
   }
@@ -244,7 +320,7 @@ class SupabaseService {
     try {
       await Supabase.instance.client.auth.signOut();
     } catch (e) {
-      print('Error signing out: $e');
+      debugPrint('Error signing out: $e');
     }
   }
 

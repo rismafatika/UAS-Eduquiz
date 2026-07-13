@@ -90,8 +90,8 @@ class _LoginPageState extends State<LoginPage> {
 
   // ── LOGIN dengan Supabase Auth ──
   Future<void> _login() async {
-    final email = _emailController.text.trim();
-    final password = _passwordController.text.trim();
+    final email = _emailController.text.trim().toLowerCase();
+    final password = _passwordController.text;
 
     if (email.isEmpty || password.isEmpty || !email.contains('@')) {
       _showSnack('Email dan password wajib diisi dengan benar.', isError: true);
@@ -131,6 +131,7 @@ class _LoginPageState extends State<LoginPage> {
       if (!mounted) return;
       _navigateHome(user);
     } on AuthException catch (e) {
+      debugPrint('Supabase login error: ${e.message}');
       if (!mounted) return;
       _showSnack(_authErrorMsg(e.message), isError: true);
     } catch (e) {
@@ -144,9 +145,9 @@ class _LoginPageState extends State<LoginPage> {
   // ── REGISTER dengan Supabase Auth ──
   Future<void> _register() async {
     final name = _nameController.text.trim();
-    final email = _emailController.text.trim();
-    final password = _passwordController.text.trim();
-    final confirm = _confirmController.text.trim();
+    final email = _emailController.text.trim().toLowerCase();
+    final password = _passwordController.text;
+    final confirm = _confirmController.text;
 
     if (name.isEmpty || email.isEmpty || password.isEmpty) {
       _showSnack('Semua field wajib diisi.', isError: true);
@@ -201,6 +202,7 @@ class _LoginPageState extends State<LoginPage> {
         _navigateHome(user);
       }
     } on AuthException catch (e) {
+      debugPrint('Supabase register error: ${e.message}');
       if (!mounted) return;
       _showSnack(_authErrorMsg(e.message), isError: true);
     } catch (e) {
@@ -213,7 +215,7 @@ class _LoginPageState extends State<LoginPage> {
 
   // ── LUPA PASSWORD ──
   Future<void> _forgotPassword() async {
-    final email = _emailController.text.trim();
+    final email = _emailController.text.trim().toLowerCase();
     if (email.isEmpty || !email.contains('@')) {
       _showSnack('Masukkan email kamu dulu di kolom email.', isError: true);
       return;
@@ -225,6 +227,7 @@ class _LoginPageState extends State<LoginPage> {
       if (!mounted) return;
       _showSnack('Link reset password dikirim ke $email', isError: false);
     } on AuthException catch (e) {
+      debugPrint('Supabase forgot-password error: ${e.message}');
       if (!mounted) return;
       _showSnack(_authErrorMsg(e.message), isError: true);
     } finally {

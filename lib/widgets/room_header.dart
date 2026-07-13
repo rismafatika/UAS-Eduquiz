@@ -46,7 +46,7 @@ class RoomHeader extends StatelessWidget {
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(
-                  room.phase == QuizPhase.live ? '🟢 Live' : '⏳ Menunggu',
+                  room.phase == QuizPhase.live ? 'Live' : 'Menunggu',
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w700,
@@ -69,7 +69,7 @@ class RoomHeader extends StatelessWidget {
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
-                  '🔑 ${room.code}',
+                  room.code,
                   style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w800,

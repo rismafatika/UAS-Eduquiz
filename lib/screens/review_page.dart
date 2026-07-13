@@ -48,6 +48,7 @@ class ReviewPage extends StatelessWidget {
                       children: [
                         const SectionTitle(
                           icon: Icons.fact_check_outlined,
+                          leadingText: '📋',
                           title: 'Review Jawaban',
                         ),
                         const SizedBox(height: 12),

@@ -4,6 +4,7 @@ import '../models/app_user.dart';
 import '../models/quiz_room.dart';
 import '../models/participant.dart';
 import '../services/room_service.dart';
+import '../services/supabase_service.dart';
 import 'quiz_live_page.dart';
 
 class CreateRoomPage extends StatefulWidget {
@@ -45,8 +46,6 @@ class _CreateRoomPageState extends State<CreateRoomPage> {
         title: 'Kuis EduQuiz',
         hostName: widget.user.name,
       );
-      await RoomService.instance
-          .addParticipant(room: room, name: widget.user.name);
       if (mounted) {
         setState(() {
           _room = room;
@@ -54,20 +53,16 @@ class _CreateRoomPageState extends State<CreateRoomPage> {
           _participants = List.from(room.participants);
           _isLoading = false;
         });
+        SupabaseService.instance.subscribeRoom(room.code, () {
+          unawaited(_refreshRoomState());
+        });
         _refreshTimer =
-            Timer.periodic(const Duration(seconds: 3), (timer) async {
-          if (mounted && _room != null) {
-            final updated =
-                await RoomService.instance.findRoomConnected(_room!.code);
-            if (updated != null) {
-              setState(() {
-                _participants = List.from(updated.participants);
-              });
-            }
-          }
+            Timer.periodic(const Duration(seconds: 3), (_) {
+          unawaited(_refreshRoomState());
         });
       }
     } catch (e) {
+      debugPrint('Create room failed: $e');
       if (mounted) {
         setState(() => _isLoading = false);
         ScaffoldMessenger.of(context).showSnackBar(
@@ -76,6 +71,30 @@ class _CreateRoomPageState extends State<CreateRoomPage> {
               backgroundColor: Colors.red),
         );
       }
+    }
+  }
+
+  Future<void> _refreshRoomState() async {
+    if (!mounted || _room == null) {
+      return;
+    }
+
+    try {
+      final updated = await RoomService.instance.findRoomConnected(_room!.code);
+      if (!mounted || updated == null) {
+        return;
+      }
+
+      setState(() {
+        _participants = List.from(updated.participants);
+        _room!.phase = updated.phase;
+        _room!.currentQuestionIndex = updated.currentQuestionIndex;
+        _room!.participants
+          ..clear()
+          ..addAll(updated.participants);
+      });
+    } catch (e) {
+      debugPrint('Refresh room failed: $e');
     }
   }
 
@@ -299,12 +318,14 @@ class _CreateRoomPageState extends State<CreateRoomPage> {
   }
 
   Widget _buildStatusAndParticipants() {
-    final status = _room!.phase == QuizPhase.lobby
+    final status = _room!.phase == QuizPhase.waiting ||
+            _room!.phase == QuizPhase.lobby
         ? 'Belum Dimulai'
         : _room!.phase == QuizPhase.live
             ? 'Sedang Berlangsung'
             : 'Selesai';
-    final statusColor = _room!.phase == QuizPhase.lobby
+    final statusColor = _room!.phase == QuizPhase.waiting ||
+            _room!.phase == QuizPhase.lobby
         ? Colors.orange
         : _room!.phase == QuizPhase.live
             ? Colors.green

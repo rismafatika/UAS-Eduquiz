@@ -1,8 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../models/app_user.dart';
 import '../models/quiz_room.dart';
 import '../services/room_service.dart';
+import '../services/supabase_service.dart';
 import '../widgets/app_panel.dart';
 import '../widgets/room_header.dart';
 import '../widgets/section_title.dart';
@@ -21,15 +24,80 @@ class LobbyPage extends StatefulWidget {
 
 class _LobbyPageState extends State<LobbyPage> {
   bool get _isHost => widget.user.role == UserRole.host;
+  Timer? _refreshTimer;
 
-  void _startQuiz() {
-    setState(() => RoomService.instance.startQuiz(widget.room));
-    Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => QuizLivePage(user: widget.user, room: widget.room)));
+  @override
+  void initState() {
+    super.initState();
+    _syncRoom();
+    SupabaseService.instance.subscribeRoom(widget.room.code, () {
+      unawaited(_syncRoom());
+    });
+    _refreshTimer = Timer.periodic(const Duration(seconds: 2), (_) {
+      unawaited(_syncRoom());
+    });
   }
 
-  void _openDashboard() {
-    RoomService.instance.showDashboard(widget.room);
-    Navigator.push(context, MaterialPageRoute(builder: (_) => HostDashboardPage(user: widget.user, room: widget.room)));
+  Future<void> _syncRoom() async {
+    try {
+      final updated =
+          await RoomService.instance.findRoomConnected(widget.room.code);
+      if (!mounted || updated == null) {
+        return;
+      }
+
+      setState(() {
+        widget.room.phase = updated.phase;
+        widget.room.currentQuestionIndex = updated.currentQuestionIndex;
+        widget.room.participants
+          ..clear()
+          ..addAll(updated.participants);
+      });
+
+      if (!_isHost && widget.room.phase == QuizPhase.live) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (_) => QuizLivePage(user: widget.user, room: widget.room),
+          ),
+        );
+      }
+    } catch (e) {
+      debugPrint('Lobby sync failed: $e');
+    }
+  }
+
+  Future<void> _startQuiz() async {
+    await RoomService.instance.startQuiz(widget.room);
+    if (!mounted) {
+      return;
+    }
+    setState(() {});
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(
+        builder: (_) => QuizLivePage(user: widget.user, room: widget.room),
+      ),
+    );
+  }
+
+  Future<void> _openDashboard() async {
+    await RoomService.instance.showDashboard(widget.room);
+    if (!mounted) {
+      return;
+    }
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => HostDashboardPage(user: widget.user, room: widget.room),
+      ),
+    );
+  }
+
+  @override
+  void dispose() {
+    _refreshTimer?.cancel();
+    super.dispose();
   }
 
   @override
@@ -51,7 +119,11 @@ class _LobbyPageState extends State<LobbyPage> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const SectionTitle(icon: Icons.groups_2_outlined, title: 'Lobby Peserta'),
+                        const SectionTitle(
+                          icon: Icons.groups_2_outlined,
+                          leadingText: '👥',
+                          title: 'Lobby Peserta',
+                        ),
                         const SizedBox(height: 12),
                         Wrap(
                           spacing: 10,
