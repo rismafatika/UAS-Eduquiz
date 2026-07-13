@@ -10,6 +10,7 @@ import '../widgets/app_panel.dart';
 import '../widgets/room_header.dart';
 import '../widgets/section_title.dart';
 import 'host_dashboard_page.dart';
+import 'leaderboard_page.dart';
 import 'quiz_live_page.dart';
 
 class LobbyPage extends StatefulWidget {
@@ -59,6 +60,15 @@ class _LobbyPageState extends State<LobbyPage> {
           context,
           MaterialPageRoute(
             builder: (_) => QuizLivePage(user: widget.user, room: widget.room),
+          ),
+        );
+      } else if (widget.room.phase == QuizPhase.leaderboard ||
+          widget.room.phase == QuizPhase.review ||
+          widget.room.phase == QuizPhase.dashboard) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (_) => LeaderboardPage(user: widget.user, room: widget.room),
           ),
         );
       }

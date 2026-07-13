@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../models/app_user.dart';
 import '../models/quiz_room.dart';
 import '../services/room_service.dart';
+import 'leaderboard_page.dart';
 import 'lobby_page.dart';
 
 class JoinRoomPage extends StatefulWidget {
@@ -40,8 +41,8 @@ class _JoinRoomPageState extends State<JoinRoomPage> {
         return;
       }
 
-      // Cek apakah room sudah dimulai
-      if (room.phase == QuizPhase.live || room.phase == QuizPhase.leaderboard) {
+      // Kalau room masih live, peserta baru tidak boleh masuk
+      if (room.phase == QuizPhase.live) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
               content: Text('Room sudah dimulai, tidak bisa bergabung'),
@@ -51,11 +52,23 @@ class _JoinRoomPageState extends State<JoinRoomPage> {
         return;
       }
 
-      // Tambahkan peserta
+      // Kalau room sudah selesai, peserta bisa langsung melihat hasil
       await RoomService.instance
           .addParticipant(room: room, name: widget.user.name);
 
       if (!mounted) return;
+
+      if (room.phase == QuizPhase.leaderboard ||
+          room.phase == QuizPhase.review ||
+          room.phase == QuizPhase.dashboard) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (_) => LeaderboardPage(user: widget.user, room: room),
+          ),
+        );
+        return;
+      }
 
       Navigator.pushReplacement(
         context,

@@ -71,7 +71,9 @@ class _QuizLivePageState extends State<QuizLivePage>
         });
       }
 
-      if (widget.room.phase == QuizPhase.leaderboard) {
+      if (widget.room.phase == QuizPhase.leaderboard ||
+          widget.room.phase == QuizPhase.review ||
+          widget.room.phase == QuizPhase.dashboard) {
         _goLeaderboard();
       }
     } catch (e) {

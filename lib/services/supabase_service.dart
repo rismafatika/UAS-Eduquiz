@@ -127,7 +127,6 @@ class SupabaseService {
       };
       final answerRows = await client.from('answers').select();
 
-      final scoreByParticipant = <String, int>{};
       final answersByParticipant = <String, Map<int, int>>{};
       for (final row in answerRows) {
         final name = row['participant_name'] as String?;
@@ -144,9 +143,6 @@ class SupabaseService {
             answersByParticipant[name] ?? <int, int>{};
         participantAnswers[questionIndex] = answerIndex;
         answersByParticipant[name] = participantAnswers;
-        if (answerIndex != question.correctIndex) continue;
-        final points = question.points ?? 100;
-        scoreByParticipant[name] = (scoreByParticipant[name] ?? 0) + points;
       }
 
       for (final row in participantRows) {
@@ -154,9 +150,7 @@ class SupabaseService {
         room.participants.add(
           Participant(
             name: name,
-            score: scoreByParticipant[name] ??
-                (row['score'] as num?)?.toInt() ??
-                0,
+            score: (row['score'] as num?)?.toInt() ?? 0,
             answers: answersByParticipant[name],
           ),
         );
@@ -233,6 +227,22 @@ class SupabaseService {
     final client = _requireClient('submitAnswer');
 
     try {
+      final participantRow = await client
+          .from('participants')
+          .select('id,score')
+          .eq('room_code', room.code)
+          .eq('name', participant.name)
+          .maybeSingle();
+
+      final currentScore =
+          (participantRow?['score'] as num?)?.toInt() ?? participant.score;
+      final points = questionIndex >= 0 &&
+              questionIndex < room.questions.length &&
+              room.questions[questionIndex].points != null
+          ? room.questions[questionIndex].points!
+          : 100;
+      final updatedScore = isCorrect ? currentScore + points : currentScore;
+
       final answerRow = {
         'participant_name': participant.name,
         'question_index': questionIndex,
@@ -254,24 +264,17 @@ class SupabaseService {
         await client.from('answers').update(answerRow).eq('id', existingAnswer['id']);
       }
 
-      final existingParticipant = await client
-          .from('participants')
-          .select('id')
-          .eq('room_code', room.code)
-          .eq('name', participant.name)
-          .maybeSingle();
-
-      if (existingParticipant == null) {
+      if (participantRow == null) {
         await client.from('participants').insert({
           'room_code': room.code,
           'name': participant.name,
-          'score': participant.score,
+          'score': updatedScore,
           'joined_at': DateTime.now().toIso8601String(),
         });
       } else {
         await client.from('participants').update({
-          'score': participant.score,
-        }).eq('id', existingParticipant['id']);
+          'score': updatedScore,
+        }).eq('id', participantRow['id']);
       }
     } catch (error) {
       _logError('Supabase submitAnswer error', error);

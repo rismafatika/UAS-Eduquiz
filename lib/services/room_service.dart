@@ -171,6 +171,17 @@ class RoomService {
       _logError('Answer error', e);
       rethrow;
     }
+
+    if (questionIdx >= room.questions.length - 1) {
+      room.phase = QuizPhase.leaderboard;
+      _cache[room.code] = room;
+      try {
+        await _supabase.updateRoom(room);
+      } catch (e) {
+        _logError('Finalize quiz error', e);
+        rethrow;
+      }
+    }
   }
 
   // ─── CHANGE PHASE ───────────────────────────────────────────

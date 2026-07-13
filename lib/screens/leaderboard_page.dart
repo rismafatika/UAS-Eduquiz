@@ -37,7 +37,7 @@ class _LeaderboardPageState extends State<LeaderboardPage> {
     SupabaseService.instance.subscribeRoom(_room.code, () {
       unawaited(_syncRoom());
     });
-    _refreshTimer = Timer.periodic(const Duration(seconds: 2), (_) {
+    _refreshTimer = Timer.periodic(const Duration(seconds: 1), (_) {
       unawaited(_syncRoom());
     });
   }
